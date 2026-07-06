@@ -1,0 +1,12 @@
+# Godot
+.godot/
+*.uid
+
+# macOS
+.DS_Store
+
+# Export
+export/
+*.apk
+*.aab
+*.ipa
