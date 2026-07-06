@@ -1,0 +1,12 @@
+{
+  "id": "GR-001",
+  "description": "AirDoubleObstacle: player not jumping — safe (Guard 1 fires)",
+  "source_trace": "AirDoubleObstacle::collision: vehicle.state != Jump → return false",
+  "inputs": {
+    "vehicle_state": "Idle",
+    "airborne_height": 0.0
+  },
+  "obstacle_type": "AirDoubleObstacle",
+  "expected_collision": false,
+  "ambiguous": false
+}

@@ -1,0 +1,15 @@
+{
+  "id": "GR-003",
+  "description": "AirDoubleObstacle: player at exact threshold height 63.0 — guards pass, result depends on rect overlap",
+  "source_trace": "AirDoubleObstacle::collision: airborne_height=63.0, 63.0 < 63.0 is false → does NOT return early → rect check",
+  "inputs": {
+    "vehicle_state": "Jump",
+    "airborne_height": 63.0,
+    "max_player_jump": 140.0,
+    "lethal_threshold": 63.0
+  },
+  "obstacle_type": "AirDoubleObstacle",
+  "expected_collision": "AMBIGUOUS",
+  "ambiguous": true,
+  "ambiguity_reason": "Result at exactly threshold depends on obstacle sprite pixel dimensions (obstaculo_1_c.png). Must measure asset or confirm against running game."
+}

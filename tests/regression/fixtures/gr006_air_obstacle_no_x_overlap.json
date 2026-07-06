@@ -1,0 +1,15 @@
+{
+  "id": "GR-006",
+  "description": "AirDoubleObstacle: guards pass but player X is behind obstacle — no rect overlap, safe",
+  "source_trace": "AirDoubleObstacle::collision: both guards pass, but currentCollisionArea(rect).intersectsRect(rectAir) == false for all 5 rects",
+  "inputs": {
+    "vehicle_state": "Jump",
+    "airborne_height": 80.0,
+    "vehicle_air_rect_x_max": 100.0,
+    "obstacle_world_x_min": 500.0
+  },
+  "obstacle_type": "AirDoubleObstacle",
+  "expected_collision": false,
+  "ambiguous": false,
+  "note": "Confirms guard-passing alone does not cause collision — rect check must also pass. X gap of 400 units ensures no overlap."
+}

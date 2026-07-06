@@ -1,0 +1,11 @@
+{
+  "id": "GR-004",
+  "description": "Score formula: 30 obstacles avoided → score 3000",
+  "source_trace": "ScoreModel::totalScore() = obstaclesAvoided * kScoreFactor = 30 * 100 = 3000",
+  "inputs": {
+    "obstacles_avoided": 30,
+    "k_score_factor": 100.0
+  },
+  "expected_total_score": 3000,
+  "ambiguous": false
+}

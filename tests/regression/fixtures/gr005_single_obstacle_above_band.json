@@ -1,0 +1,19 @@
+{
+  "id": "GR-005",
+  "description": "SingleObstacle: player Y above valid lane band — safe (lane guard fires)",
+  "source_trace": "SingleObstacle::collision: y_effective = playerY + playerH*0.15; if y_effective > bottom(= bbox.minY + height*0.37) → return false",
+  "inputs": {
+    "player_y": 200.0,
+    "player_content_height": 64.0,
+    "y_effective_formula": "playerY + playerH * 0.15",
+    "y_effective": 209.6,
+    "obstacle_bbox_min_y": 50.0,
+    "obstacle_height": 100.0,
+    "band_top": 50.0,
+    "band_bottom": 87.0
+  },
+  "obstacle_type": "SingleObstacle",
+  "expected_collision": false,
+  "ambiguous": false,
+  "note": "Concrete numbers use placeholder sprite sizes. The LOGIC (y_effective > bottom → false) is definitive from source."
+}
