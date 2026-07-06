@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "speedMultiplier": 1.2,
+  "distanceMultiplier": 1.5,
+  "speedAcceleration": 2.0,
+  "maxWorldSpeed": 1100.0,
+  "map": [0, 1, 2, 3, 0, 1, 2, 3, 0, 1]
+}
