@@ -14,7 +14,6 @@ static func load_level(level_name: String) -> LevelData:
 	var path := "res://resources/levels/%s.json" % level_name
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		push_error("LevelData: cannot open %s" % path)
 		return null
 
 	var text := file.get_as_text()
@@ -22,7 +21,6 @@ static func load_level(level_name: String) -> LevelData:
 
 	var parsed: Variant = JSON.parse_string(text)
 	if parsed == null or not (parsed is Dictionary):
-		push_error("LevelData: JSON parse error in %s" % path)
 		return null
 
 	var d: Dictionary = parsed
