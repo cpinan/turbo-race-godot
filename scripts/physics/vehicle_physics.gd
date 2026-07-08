@@ -6,9 +6,9 @@ const JUMP_DURATION: float   = 0.6
 const DEFAULT_SPEED: float   = 11.0
 
 # Jump arc: t in [0,1] → Y offset from ground.
-# Matches Cocos2d-x JumpBy parabola formula.
+# Matches Cocos2d-x JumpBy formula: height * |sin(π * frac)| with jumps=1.
 static func jump_arc_offset(t: float) -> float:
-	return MAX_PLAYER_JUMP * 4.0 * t * (1.0 - t)
+	return MAX_PLAYER_JUMP * sin(t * PI)
 
 # Can the vehicle initiate a jump?
 # Source: BaseVehicle::doJump guard: y <= 1 AND state != Jump

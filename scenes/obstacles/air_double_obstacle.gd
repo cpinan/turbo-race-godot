@@ -2,8 +2,13 @@ class_name AirDoubleObstacle
 extends BaseObstacle
 
 # Source: AirDoubleObstacle.cpp
-# Texture: obstaculo_1_c.png
-# ObstacleType::Normal (default) — controls pool routing in GameLayer
+# Texture: obstaculo_1_c.png (152 x 178)
+# ObstacleType::Normal — lethal only when jumping at height >= 63 units
+
+func _ready() -> void:
+	var tex: Texture2D = load("res://resources/assets/obstaculo_1_c.png")
+	$Sprite2D.texture = tex
+	_init_obstacle(tex.get_size())
 
 func _init_obstacle(size: Vector2) -> void:
 	content_size  = size

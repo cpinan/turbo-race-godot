@@ -25,3 +25,6 @@ func add_avoided(is_jump_type: bool) -> void:
 func reset() -> void:
 	_data.reset()
 	emit_signal("reset_done")
+
+func current_score() -> GameScore:
+	return _data

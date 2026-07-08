@@ -1,5 +1,5 @@
 class_name BaseVehicle
-extends CharacterBody2D
+extends Node2D
 
 # ---------------------------------------------------------------------------
 # State — mirrors ActorState enum from GameTypes.hpp
@@ -45,6 +45,7 @@ func do_jump() -> void:
 
 	state = ActorState.JUMP
 	_jump_start_y = player_y + content_size.y * 0.5  # sprite center on ground
+	AudioManager.play_sfx(AudioManager.SFX_JUMP)
 	emit_signal("jumped")
 
 	if _jump_tween:
@@ -108,4 +109,19 @@ func get_airborne_height() -> float:
 func die() -> void:
 	if _jump_tween:
 		_jump_tween.kill()
+	AudioManager.play_sfx(AudioManager.SFX_SMASH)
 	emit_signal("died")
+
+# ---------------------------------------------------------------------------
+# Reset for game restart
+# ---------------------------------------------------------------------------
+
+func reset_state() -> void:
+	if _jump_tween:
+		_jump_tween.kill()
+		_jump_tween = null
+	state = ActorState.IDLE
+	_on_reset()
+
+func _on_reset() -> void:
+	pass

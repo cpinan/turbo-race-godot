@@ -2,8 +2,13 @@ class_name SingleObstacle
 extends BaseObstacle
 
 # Source: SingleObstacle.cpp
-# Texture: muro_2b.png
+# Texture: muro_2b.png (138 x 214)
 # ObstacleType::Simple
+
+func _ready() -> void:
+	var tex: Texture2D = load("res://resources/assets/muro_2b.png")
+	$Sprite2D.texture = tex
+	_init_obstacle(tex.get_size())
 
 func _init_obstacle(size: Vector2) -> void:
 	content_size  = size

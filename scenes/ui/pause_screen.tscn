@@ -1,0 +1,52 @@
+[gd_scene load_steps=8 format=3 uid="uid://cn5xge2mq8r3k"]
+
+[ext_resource type="Script" path="res://scenes/ui/pause_screen.gd" id="1"]
+[ext_resource type="Texture2D" path="res://resources/assets/pause_screen.png" id="2"]
+[ext_resource type="Texture2D" path="res://resources/assets/pause_replay_off.png" id="3"]
+[ext_resource type="Texture2D" path="res://resources/assets/pause_replay.png" id="4"]
+[ext_resource type="Texture2D" path="res://resources/assets/pause_play_off.png" id="5"]
+[ext_resource type="Texture2D" path="res://resources/assets/pause_play.png" id="6"]
+[ext_resource type="Texture2D" path="res://resources/assets/pause_home_off.png" id="7"]
+[ext_resource type="Texture2D" path="res://resources/assets/pause_home.png" id="8"]
+
+[node name="PauseScreen" type="CanvasLayer"]
+layer = 2
+script = ExtResource("1")
+
+[node name="Overlay" type="ColorRect" parent="."]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 1024.0
+offset_bottom = 768.0
+color = Color(0, 0, 0, 0.392157)
+
+[node name="BG" type="TextureRect" parent="."]
+offset_left = 252.0
+offset_top = 159.0
+offset_right = 772.0
+offset_bottom = 609.0
+texture = ExtResource("2")
+
+[node name="BtnRestart" type="TextureButton" parent="BG"]
+offset_left = 80.0
+offset_top = 288.0
+offset_right = 200.0
+offset_bottom = 378.0
+texture_normal = ExtResource("3")
+texture_pressed = ExtResource("4")
+
+[node name="BtnResume" type="TextureButton" parent="BG"]
+offset_left = 212.0
+offset_top = 274.0
+offset_right = 332.0
+offset_bottom = 364.0
+texture_normal = ExtResource("5")
+texture_pressed = ExtResource("6")
+
+[node name="BtnHome" type="TextureButton" parent="BG"]
+offset_left = 344.0
+offset_top = 274.0
+offset_right = 464.0
+offset_bottom = 364.0
+texture_normal = ExtResource("7")
+texture_pressed = ExtResource("8")
