@@ -9,6 +9,10 @@ extends Node
 
 var _current_level: String = "easy"
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		get_tree().quit()
+
 func _ready() -> void:
 	# Show home screen on launch
 	_show_home()

@@ -26,6 +26,29 @@ func _ready() -> void:
 	_btn_restart.pressed.connect(func():
 		AudioManager.play_sfx(AudioManager.SFX_BUTTON)
 		emit_signal("restart_pressed"))
+
+	# Position labels relative to badge per PopUpLoseLayer.cpp:
+	# score at (badge.width*0.5, -badge.height*0.1) from BG center → just right of badge center, slightly below
+	# best  at score.y - badge.height*0.28 further down
+	var bx: float = _badge.offset_left
+	var br: float = _badge.offset_right
+	var bb: float = _badge.offset_bottom
+	var bw: float = br - bx
+	var row_h: float = 36.0
+	_score_label.offset_left  = bx
+	_score_label.offset_right = bx + bw + 80.0  # extend right of badge
+	_score_label.offset_top   = bb + 4.0
+	_score_label.offset_bottom = bb + 4.0 + row_h
+	_score_label.rotation_degrees = -3.0
+	_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+	_best_label.offset_left  = bx
+	_best_label.offset_right = bx + bw + 80.0
+	_best_label.offset_top   = bb + 4.0 + row_h + 6.0
+	_best_label.offset_bottom = bb + 4.0 + row_h + 6.0 + row_h
+	_best_label.rotation_degrees = -3.0
+	_best_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+
 	hide()
 
 func show_result(level_name: String, score: GameScore) -> void:
