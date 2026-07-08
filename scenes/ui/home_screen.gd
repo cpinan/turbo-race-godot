@@ -12,6 +12,7 @@ var _disabled: bool = false
 
 @onready var _logo:         TextureRect = $Logo
 @onready var _tablero:      TextureRect = $Tablero
+@onready var _menu:         Control = $Menu
 @onready var _btn_easy:     TextureButton = $Menu/BtnEasy
 @onready var _btn_normal:   TextureButton = $Menu/BtnNormal
 @onready var _btn_hard:     TextureButton = $Menu/BtnHard
@@ -20,11 +21,15 @@ var _disabled: bool = false
 @onready var _settings_overlay: Control = $SettingsOverlay
 
 func _ready() -> void:
+	# Hide menu while logo slides in — show after animation completes
+	_menu.visible = false
+
 	# Logo slides in from left
 	_logo.position.x = -_logo.size.x * 1.2
 	var tween := create_tween()
 	tween.tween_interval(0.25)
 	tween.tween_property(_logo, "position:x", 1024.0 * 0.65 - _logo.size.x * 0.5, 0.9)
+	tween.tween_callback(func(): _menu.visible = true)
 
 	# Sound toggle state
 	_update_sound_btn()

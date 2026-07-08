@@ -8,6 +8,7 @@ const MUSIC_TRACKS: Array = [
 	"res://resources/audio/POL-turtle-blues-short.mp3",
 ]
 const MUSIC_VOLUME: float = 0.4
+const SFX_VOLUME:    float = 0.3
 const SFX_BUTTON:    String = "res://resources/audio/button.mp3"
 const SFX_JUMP:      String = "res://resources/audio/jump.mp3"
 const SFX_SMASH:     String = "res://resources/audio/smash.mp3"
@@ -34,8 +35,9 @@ func play_music() -> void:
 		return
 	var path: String = MUSIC_TRACKS[_music_index]
 	_music_index = (_music_index + 1) % MUSIC_TRACKS.size()
-	var stream: AudioStream = load(path)
+	var stream: AudioStreamMP3 = load(path)
 	if stream:
+		stream.loop = true  # mirrors AudioEngine::setLoop(musicId, true)
 		_music_player.stream = stream
 		_music_player.volume_db = linear_to_db(MUSIC_VOLUME)
 		_music_player.play()
@@ -49,6 +51,7 @@ func play_sfx(path: String) -> void:
 	var stream: AudioStream = load(path)
 	if stream:
 		_sfx_player.stream = stream
+		_sfx_player.volume_db = linear_to_db(SFX_VOLUME)
 		_sfx_player.play()
 
 func set_mute(mute: bool) -> void:
@@ -59,4 +62,6 @@ func set_mute(mute: bool) -> void:
 		play_music()
 
 func _on_music_finished() -> void:
-	play_music()
+	# stream.loop = true keeps this from firing; kept as fallback.
+	if not SaveManager.is_mute() and _music_player.stream:
+		_music_player.play()
