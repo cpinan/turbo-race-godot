@@ -291,6 +291,30 @@ See `docs/LEADERBOARD_SETUP.md` for:
 
 ---
 
+## Claude Code skill
+
+This repo ships a [Claude Code](https://claude.ai/code) skill that captures every non-obvious decision made during the migration. If you're porting a different Cocos2d-x game to Godot 4, you can reuse it directly.
+
+**How to use:**
+
+1. Clone this repo (or copy `.claude/skills/cocos2dx-to-godot/SKILL.md` into your own project's `.claude/skills/` folder)
+2. Open the project in Claude Code
+3. Type `/cocos2dx-to-godot` in any prompt
+
+The skill covers:
+- Y-axis flip pattern (Cocos2d-x Y-up → Godot Y-down)
+- `JumpBy` sine arc formula — and why parabola is wrong
+- Pure physics function architecture for unit-testable collision logic
+- Z-depth ordering formula derived from `GameDeep` enum
+- Collision rect fractions (read from C++ `contentSize`, never guessed)
+- All three obstacle collision guards (`SingleObstacle`, `DoubleObstacle`, `AirDoubleObstacle`)
+- Unified touch + mouse joystick input pattern
+- Parallax scroll, obstacle pooling, scoring, world speed constants
+- Parity verification checklist
+- GUT headless test commands
+
+---
+
 ## Key source files in the C++ reference
 
 | C++ file | What it defines |

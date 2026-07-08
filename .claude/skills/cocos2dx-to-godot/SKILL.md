@@ -4,7 +4,19 @@ description: >
   Guide for porting a Cocos2d-x/C++ game to Godot 4 GDScript with full behavioral parity.
   Use when asked to port, migrate, or compare Cocos2d-x code to Godot 4 — or when debugging
   parity issues in an existing migration.
+usage: /cocos2dx-to-godot
+source: https://github.com/cpinan/turbo-race-godot
 ---
+
+<!--
+  Reusable Claude Code skill — learned from porting Turbo Race (endless runner)
+  from Cocos2d-x/C++ to Godot 4.7 GDScript.
+
+  To use in another project:
+    1. Copy this file to <your-project>/.claude/skills/cocos2dx-to-godot/SKILL.md
+    2. Open the project in Claude Code
+    3. Invoke with /cocos2dx-to-godot
+-->
 
 # Cocos2d-x → Godot 4 Migration Guide
 
