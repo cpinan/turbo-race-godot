@@ -254,18 +254,21 @@ func _physics_process(delta: float) -> void:
 		return
 
 	# Apply movement — joystick or accelerometer depending on control setting.
-	# Accelerometer formula mirrors GameLayer::didAccelerate:
-	#   velocity = accel * speed * 0.5 * speed * 0.5  (two half-speed multiplications)
 	if _player:
 		if SaveManager.is_using_joypad():
 			if _joy_active and (_joy_norm_x != 0.0 or _joy_norm_y != 0.0):
 				var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
 				_player.do_move(Vector2(_joy_norm_x * spd, _joy_norm_y * spd), WIN_W)
 		else:
-			var accel: Vector3 = Input.get_accelerometer()
-			var half_spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS * 0.5
-			var vx: float = accel.x * half_spd * VehiclePhysics.DEFAULT_SPEED * 0.5
-			var vy: float = accel.y * half_spd * VehiclePhysics.DEFAULT_SPEED * 0.5
+			# Mirrors GameLayer::didAccelerate: vel = accel * speed * 0.5 * speed * 0.5
+			# Godot returns m/s² (gravity ≈ 9.8); C++ Acceleration was normalized -1..1 → divide by 9.8
+			var raw: Vector3 = Input.get_accelerometer()
+			const GRAVITY: float = 9.8
+			var nx: float = raw.x / GRAVITY
+			var ny: float = raw.y / GRAVITY
+			var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
+			var vx: float = nx * spd * 0.5 * VehiclePhysics.DEFAULT_SPEED * 0.5
+			var vy: float = ny * spd * 0.5 * VehiclePhysics.DEFAULT_SPEED * 0.5
 			if vx != 0.0 or vy != 0.0:
 				_player.do_move(Vector2(vx, vy), WIN_W)
 
