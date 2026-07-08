@@ -59,8 +59,9 @@ func _try_sign_in() -> void:
 	if not _available:
 		return
 	var plugin = Engine.get_singleton("GodotPlayGameServices")
-	if plugin.has_signal("user_authenticated"):
-		plugin.user_authenticated.connect(_on_signed_in)
+	# v3.2.0: native plugin signal is camelCase "userAuthenticated"
+	if plugin.has_signal("userAuthenticated"):
+		plugin.userAuthenticated.connect(_on_signed_in)
 	if plugin.has_method("initialize"):
 		plugin.initialize()
 
