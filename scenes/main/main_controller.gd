@@ -13,6 +13,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		get_tree().quit()
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE or event.keycode == KEY_BACK:
+			get_tree().quit()
+
 func _ready() -> void:
 	# Show home screen on launch
 	_show_home()
