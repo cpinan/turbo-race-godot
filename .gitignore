@@ -10,3 +10,6 @@ export/
 *.apk
 *.aab
 *.ipa
+
+# Android build output
+bin/
