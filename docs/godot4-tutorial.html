@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Godot 4 — From Cocos2d-x to GDScript</title>
+<style>
+  :root {
+    --bg:       #0f1117;
+    --surface:  #1a1d27;
+    --border:   #2a2d3e;
+    --accent:   #7c6af7;
+    --accent2:  #4ecdc4;
+    --accent3:  #ff6b6b;
+    --text:     #e8eaf6;
+    --muted:    #8892a4;
+    --code-bg:  #12151f;
+    --green:    #69db7c;
+    --yellow:   #ffd43b;
+    --orange:   #ffa94d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Deck ─────────────────────────────────────────────────── */
+  #deck {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 48px 64px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    overflow-y: auto;
+  }
+  .slide.active {
+    display: flex;
+    opacity: 1;
+  }
+
+  /* ── Typography ───────────────────────────────────────────── */
+  .slide h1 {
+    font-size: 2.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+  .slide h2 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    letter-spacing: -0.01em;
+  }
+  .slide h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+  p { line-height: 1.7; color: var(--muted); font-size: 1.05rem; }
+  p + p { margin-top: 12px; }
+  strong { color: var(--text); font-weight: 600; }
+
+  .subtitle {
+    font-size: 1.15rem;
+    color: var(--muted);
+    margin-top: 8px;
+    margin-bottom: 40px;
+  }
+
+  /* ── Tags / pills ─────────────────────────────────────────── */
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-right: 6px;
+    margin-bottom: 4px;
+  }
+  .tag-purple  { background: #2d2660; color: var(--accent); }
+  .tag-teal    { background: #1a3535; color: var(--accent2); }
+  .tag-red     { background: #3a1a1a; color: var(--accent3); }
+  .tag-green   { background: #1a3020; color: var(--green); }
+  .tag-yellow  { background: #3a3010; color: var(--yellow); }
+
+  /* ── Code blocks ──────────────────────────────────────────── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 16px 0;
+    flex-shrink: 0;
+  }
+  code {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.85em;
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent2);
+  }
+
+  /* Syntax colours (hand-applied via spans) */
+  .kw  { color: #c792ea; }   /* keywords: var, func, if, class_name */
+  .fn  { color: #82aaff; }   /* function names */
+  .str { color: #c3e88d; }   /* strings */
+  .num { color: var(--orange); }  /* numbers */
+  .cm  { color: #546e7a; font-style: italic; }  /* comments */
+  .ty  { color: var(--yellow); }  /* types */
+  .co  { color: var(--accent3); } /* constants */
+
+  /* ── Layout helpers ───────────────────────────────────────── */
+  .cols { display: grid; gap: 24px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .card h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .card p { font-size: 0.9rem; }
+
+  ul { padding-left: 20px; }
+  ul li { line-height: 1.75; color: var(--muted); font-size: 1rem; }
+  ul li strong { color: var(--text); }
+  ul li + li { margin-top: 4px; }
+
+  ol { padding-left: 22px; }
+  ol li { line-height: 1.8; color: var(--muted); font-size: 0.98rem; }
+  ol li + li { margin-top: 6px; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin: 16px 0;
+  }
+  th {
+    text-align: left;
+    color: var(--accent2);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 9px 12px;
+    color: var(--muted);
+    border-bottom: 1px solid #1e2130;
+    vertical-align: top;
+  }
+  td:first-child { color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+
+  .highlight-box {
+    background: #1e1b40;
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 20px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .warn-box {
+    background: #2a1f10;
+    border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 20px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .success-box {
+    background: #0f2318;
+    border-left: 4px solid var(--green);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 20px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* ── Diagram-style boxes ──────────────────────────────────── */
+  .diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    font-family: monospace;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+  .diagram .node { color: var(--accent2); font-weight: bold; }
+  .diagram .arrow { color: var(--border); }
+  .diagram .leaf { color: var(--text); }
+
+  /* ── Title slide ──────────────────────────────────────────── */
+  .title-slide {
+    justify-content: center;
+    align-items: flex-start;
+    background: radial-gradient(ellipse at 70% 40%, #1a1548 0%, var(--bg) 65%);
+  }
+  .title-slide h1 { font-size: 3.2rem; }
+  .title-accent {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .chapter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e1b40;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+
+  /* ── Chapter divider slides ───────────────────────────────── */
+  .chapter-slide {
+    justify-content: center;
+    align-items: flex-start;
+    background: radial-gradient(ellipse at 30% 60%, #1a2a35 0%, var(--bg) 70%);
+  }
+  .chapter-slide h1 { font-size: 2.8rem; color: var(--accent2); }
+
+  /* ── Navigation ───────────────────────────────────────────── */
+  #nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 64px;
+    background: linear-gradient(to top, var(--bg), transparent);
+    pointer-events: none;
+    z-index: 100;
+  }
+  .nav-btn {
+    pointer-events: all;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nav-btn:hover { background: var(--border); border-color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .nav-btn:disabled:hover { background: var(--surface); border-color: var(--border); }
+
+  #progress-wrap {
+    pointer-events: all;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  #progress-bar {
+    width: 140px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  #slide-num { min-width: 60px; text-align: center; }
+
+  /* ── TOC ──────────────────────────────────────────────────── */
+  .toc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .toc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .toc-item:hover { border-color: var(--accent); color: var(--text); }
+  .toc-num {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 22px;
+  }
+
+  /* ── Keyboard hint ────────────────────────────────────────── */
+  .key-hint {
+    position: fixed;
+    top: 20px;
+    right: 64px;
+    display: flex;
+    gap: 8px;
+    opacity: 0.4;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  kbd {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: inherit;
+    font-size: 0.72rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="key-hint">
+  <kbd>←</kbd><kbd>→</kbd> navigate &nbsp;·&nbsp; <kbd>F</kbd> fullscreen
+</div>
+
+<div id="deck">
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 1 — Title
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide title-slide active">
+  <div class="chapter-badge">📖 Interactive Tutorial</div>
+  <h1>Godot 4<br><span class="title-accent">for Game Developers</span></h1>
+  <p class="subtitle">A practical guide built from porting an endless-runner<br>from Cocos2d-x/C++ to Godot 4.7 + GDScript.</p>
+  <div style="margin-top:32px; display:flex; gap:10px; flex-wrap:wrap;">
+    <span class="tag tag-purple">Godot 4.7</span>
+    <span class="tag tag-teal">GDScript</span>
+    <span class="tag tag-green">Mobile</span>
+    <span class="tag tag-yellow">Physics</span>
+    <span class="tag tag-red">Parity Migration</span>
+  </div>
+  <div class="divider" style="margin-top:36px;"></div>
+  <p style="font-size:0.9rem;">Use <strong>← →</strong> arrow keys or the buttons below to navigate. 24 slides total.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 2 — Contents
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>What you'll learn</h3>
+  <h2>Table of Contents</h2>
+  <div class="toc-grid">
+    <div class="toc-item" onclick="goTo(3)"><span class="toc-num">01</span> GDScript basics &amp; static typing</div>
+    <div class="toc-item" onclick="goTo(4)"><span class="toc-num">02</span> Scene tree &amp; nodes</div>
+    <div class="toc-item" onclick="goTo(5)"><span class="toc-num">03</span> Coordinate system (Y-axis)</div>
+    <div class="toc-item" onclick="goTo(6)"><span class="toc-num">04</span> CanvasLayer for UI</div>
+    <div class="toc-item" onclick="goTo(7)"><span class="toc-num">05</span> _process vs _physics_process</div>
+    <div class="toc-item" onclick="goTo(8)"><span class="toc-num">06</span> Signals</div>
+    <div class="toc-item" onclick="goTo(9)"><span class="toc-num">07</span> Autoloads (singletons)</div>
+    <div class="toc-item" onclick="goTo(10)"><span class="toc-num">08</span> Pure physics functions</div>
+    <div class="toc-item" onclick="goTo(11)"><span class="toc-num">09</span> Jump arc — sine formula</div>
+    <div class="toc-item" onclick="goTo(12)"><span class="toc-num">10</span> Collision rectangles</div>
+    <div class="toc-item" onclick="goTo(13)"><span class="toc-num">11</span> Obstacle collision guards</div>
+    <div class="toc-item" onclick="goTo(14)"><span class="toc-num">12</span> Z-depth ordering</div>
+    <div class="toc-item" onclick="goTo(15)"><span class="toc-num">13</span> Touch &amp; mouse input</div>
+    <div class="toc-item" onclick="goTo(16)"><span class="toc-num">14</span> Virtual joystick pattern</div>
+    <div class="toc-item" onclick="goTo(17)"><span class="toc-num">15</span> Parallax scrolling</div>
+    <div class="toc-item" onclick="goTo(18)"><span class="toc-num">16</span> Object pooling</div>
+    <div class="toc-item" onclick="goTo(19)"><span class="toc-num">17</span> Scoring &amp; world speed</div>
+    <div class="toc-item" onclick="goTo(20)"><span class="toc-num">18</span> Testing with GUT</div>
+    <div class="toc-item" onclick="goTo(21)"><span class="toc-num">19</span> Android &amp; leaderboards</div>
+    <div class="toc-item" onclick="goTo(22)"><span class="toc-num">20</span> Parity checklist</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 3 — GDScript basics
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 01</h3>
+  <h2>GDScript — Static Typing</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>GDScript is Python-like but compiled. Use <strong>static types everywhere</strong> — catches bugs at editor-time, generates faster bytecode, and matches the safety of C++.</p>
+      <pre><span class="cm"># BAD — dynamic, no type safety</span>
+<span class="kw">var</span> speed = 11.0
+<span class="kw">func</span> <span class="fn">move</span>(delta):
+    position.x += speed * delta</pre>
+      <pre><span class="cm"># GOOD — static typing throughout</span>
+<span class="kw">var</span> speed: <span class="ty">float</span> = 11.0
+
+<span class="kw">func</span> <span class="fn">move</span>(delta: <span class="ty">float</span>) -> <span class="ty">void</span>:
+    position.x += speed * delta</pre>
+    </div>
+    <div>
+      <p style="margin-bottom:14px;">Key GDScript types:</p>
+      <table>
+        <tr><th>Type</th><th>C++ equivalent</th></tr>
+        <tr><td><code>float</code></td><td><code>float</code></td></tr>
+        <tr><td><code>int</code></td><td><code>int</code></td></tr>
+        <tr><td><code>bool</code></td><td><code>bool</code></td></tr>
+        <tr><td><code>String</code></td><td><code>std::string</code></td></tr>
+        <tr><td><code>Vector2</code></td><td><code>Vec2</code></td></tr>
+        <tr><td><code>Rect2</code></td><td>bounding-box struct</td></tr>
+        <tr><td><code>Array[T]</code></td><td><code>std::vector&lt;T&gt;</code></td></tr>
+        <tr><td><code>Dictionary</code></td><td><code>std::map</code></td></tr>
+      </table>
+      <div class="highlight-box">
+        <strong>Rule:</strong> Every <code>var</code>, every function parameter, every return type gets a type annotation. No exceptions.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 4 — Scene tree
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 02</h3>
+  <h2>Scene Tree &amp; Nodes</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Everything in Godot is a <strong>Node</strong> in a tree. Scenes are reusable subtrees saved as <code>.tscn</code> files. Scripts attach to nodes with <code>extends</code>.</p>
+      <div class="diagram" style="margin-top:16px;">
+<span class="node">Main</span> (Node)
+├── <span class="node">GameScene</span> (Node2D)
+│   ├── <span class="leaf">Player</span> (CharacterBody2D)
+│   ├── <span class="leaf">Parallax</span> (Node2D)
+│   └── <span class="leaf">ObstacleRoot</span> (Node2D)
+├── <span class="node">HUD</span> (CanvasLayer)
+│   ├── <span class="leaf">ScoreLabel</span> (Label)
+│   └── <span class="leaf">JoystickBG</span> (TextureRect)
+├── <span class="node">PauseScreen</span> (CanvasLayer)
+└── <span class="node">GameOverScreen</span> (CanvasLayer)
+      </div>
+      <pre><span class="cm"># Script attaches to a node</span>
+<span class="kw">extends</span> <span class="ty">CharacterBody2D</span>
+<span class="kw">class_name</span> <span class="ty">BaseVehicle</span>
+
+<span class="kw">func</span> <span class="fn">_ready</span>() -> <span class="ty">void</span>:
+    <span class="cm"># called when node enters the scene tree</span>
+    <span class="kw">pass</span></pre>
+    </div>
+    <div>
+      <p><strong>Node lifecycle:</strong></p>
+      <ol style="margin:14px 0;">
+        <li><code>_ready()</code> — node entered tree, all children ready</li>
+        <li><code>_process(delta)</code> — every frame (rendering)</li>
+        <li><code>_physics_process(delta)</code> — fixed rate (physics)</li>
+        <li><code>_input(event)</code> — raw input events</li>
+        <li><code>_unhandled_input(event)</code> — input not consumed</li>
+      </ol>
+      <div class="divider"></div>
+      <p><strong>Accessing child nodes:</strong></p>
+      <pre><span class="cm"># By path ($shortcut = get_node)</span>
+<span class="kw">@onready var</span> _label: <span class="ty">Label</span> = $ScoreLabel
+<span class="kw">@onready var</span> _btn: <span class="ty">TextureButton</span> = $BtnPause
+
+<span class="cm"># @onready defers until _ready() fires</span>
+<span class="cm"># — safe to use in _ready() and beyond</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 5 — Coordinate system
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 03</h3>
+  <h2>Coordinate System — The Y-Axis Problem</h2>
+  <div class="cols cols-2">
+    <div>
+      <p><strong>Cocos2d-x:</strong> Y-up (origin bottom-left)<br>
+         <strong>Godot 2D:</strong> Y-down (origin top-left)</p>
+      <div class="diagram" style="margin-top:16px; text-align:center; font-size:0.9rem; padding:24px;">
+<span style="color:var(--accent3)">Cocos2d-x</span>             <span style="color:var(--accent2)">Godot 2D</span>
+
+(0,768) ●───────       ●───────── (1024,0)
+        │   Y↑              Y↓ │
+        │                      │
+(0,0)   ●──────→  X    X ←────● (0,768)
+      </div>
+      <div class="warn-box">
+        If you port positions directly without compensating, every sprite appears upside-down and Y coordinates are mirrored.
+      </div>
+    </div>
+    <div>
+      <p><strong>Solution: flip the root node</strong></p>
+      <pre><span class="cm"># GameScene root node (in .tscn or _ready)</span>
+<span class="cm"># Flips the entire coordinate space to Y-up</span>
+scale    = <span class="ty">Vector2</span>(<span class="num">1</span>, <span class="num">-1</span>)
+position = <span class="ty">Vector2</span>(<span class="num">0</span>, <span class="num">768</span>)  <span class="cm"># WIN_H</span></pre>
+      <pre><span class="cm"># Each Sprite2D inside needs a counter-flip</span>
+<span class="cm"># (otherwise texture appears upside-down)</span>
+$PlayerSprite.scale = <span class="ty">Vector2</span>(<span class="num">1</span>, <span class="num">-1</span>)</pre>
+      <div class="highlight-box">
+        <strong>CanvasLayer is exempt.</strong> It bypasses all parent transforms — always use Y-down coordinates inside CanvasLayer nodes (UI, HUD).
+      </div>
+      <div class="success-box">
+        With this flip, every C++ position value works unchanged in Godot. <code>position.y = 300</code> still means 300 units from the bottom.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 6 — CanvasLayer
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 04</h3>
+  <h2>CanvasLayer — UI That Ignores World Transforms</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>A <code>CanvasLayer</code> node renders its children in a <strong>separate 2D canvas</strong>, ignoring any transforms from parent nodes — including the Y-flip on GameScene.</p>
+      <pre><span class="cm"># HUD stays in screen space regardless of</span>
+<span class="cm"># what the game world does</span>
+<span class="kw">class_name</span> <span class="ty">HUD</span>
+<span class="kw">extends</span> <span class="ty">CanvasLayer</span>
+
+<span class="kw">@onready var</span> _score: <span class="ty">Label</span> = $ScoreLabel
+
+<span class="kw">func</span> <span class="fn">show_hud</span>() -> <span class="ty">void</span>:
+    visible = <span class="kw">true</span>
+
+<span class="kw">func</span> <span class="fn">hide_hud</span>() -> <span class="ty">void</span>:
+    visible = <span class="kw">false</span></pre>
+      <p>The <code>layer</code> property controls draw order (higher = in front of lower layers).</p>
+    </div>
+    <div>
+      <p><strong>When to use CanvasLayer:</strong></p>
+      <ul style="margin:14px 0;">
+        <li>All HUD elements (score, pause button)</li>
+        <li>Pause screen, game-over screen, home screen</li>
+        <li>Virtual joystick overlay</li>
+        <li>Any UI that must stay fixed to the screen</li>
+      </ul>
+      <div class="divider"></div>
+      <p><strong>When NOT to use CanvasLayer:</strong></p>
+      <ul style="margin:14px 0;">
+        <li>Game world objects (player, obstacles, parallax)</li>
+        <li>Anything that should move with the game camera</li>
+      </ul>
+      <div class="highlight-box">
+        Think of CanvasLayer like Cocos2d-x <code>ui::Layer</code> — it's always in "screen space", not "world space".
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 7 — process vs physics_process
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 05</h3>
+  <h2>_process vs _physics_process</h2>
+  <div class="cols cols-2">
+    <div>
+      <pre><span class="cm"># _process: runs every rendered frame</span>
+<span class="cm"># delta = time since last frame (variable)</span>
+<span class="kw">func</span> <span class="fn">_process</span>(delta: <span class="ty">float</span>) -> <span class="ty">void</span>:
+    <span class="cm"># Good for: animations, UI, camera</span>
+    <span class="fn">_update_score_label</span>()</pre>
+      <pre><span class="cm"># _physics_process: fixed timestep</span>
+<span class="cm"># Default: 60 Hz (ProjectSettings)</span>
+<span class="kw">func</span> <span class="fn">_physics_process</span>(delta: <span class="ty">float</span>) -> <span class="ty">void</span>:
+    <span class="cm"># Good for: movement, collision, input</span>
+    <span class="fn">_move_player</span>(delta)
+    <span class="fn">_scroll_world</span>(delta)
+    <span class="fn">_check_collisions</span>()</pre>
+      <div class="warn-box">
+        Physics and movement go in <code>_physics_process</code>. Mixing them in <code>_process</code> causes frame-rate-dependent speed.
+      </div>
+    </div>
+    <div>
+      <table>
+        <tr><th></th><th>_process</th><th>_physics_process</th></tr>
+        <tr><td>Rate</td><td>Variable (fps)</td><td>Fixed (60 Hz)</td></tr>
+        <tr><td>delta</td><td>Varies</td><td>Constant (~0.0167)</td></tr>
+        <tr><td>Use for</td><td>Visuals, UI</td><td>Physics, input</td></tr>
+        <tr><td>Cocos2d-x equiv</td><td><code>update()</code></td><td>physics step</td></tr>
+      </table>
+      <div class="divider"></div>
+      <p><strong>Cocos2d-x <code>update(dt)</code> maps to <code>_physics_process</code></strong> in Godot — not <code>_process</code>. The original game ran collision checks and movement inside a fixed-tick scheduler.</p>
+      <pre><span class="cm"># Godot constant for physics FPS</span>
+<span class="kw">const</span> <span class="co">PHYSICS_FPS</span>: <span class="ty">float</span> = <span class="num">60.0</span>
+<span class="cm"># Use when converting speed from px/tick to px/s:</span>
+<span class="cm"># speed_px_per_s = speed_px_per_tick * PHYSICS_FPS</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 8 — Signals
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 06</h3>
+  <h2>Signals — Godot's Event System</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Signals replace Cocos2d-x notification strings (<code>CC_BROADCAST_MESSAGE_TYPE_GAME_OVER</code>) with type-safe, decoupled events.</p>
+      <pre><span class="cm"># Define a signal</span>
+<span class="kw">class_name</span> <span class="ty">GameManager</span>
+<span class="kw">extends</span> <span class="ty">Node</span>
+
+<span class="kw">signal</span> game_over
+<span class="kw">signal</span> score_changed(total: <span class="ty">int</span>)
+
+<span class="cm"># Emit</span>
+<span class="kw">func</span> <span class="fn">trigger_game_over</span>() -> <span class="ty">void</span>:
+    emit_signal(<span class="str">"game_over"</span>)
+
+<span class="cm"># Emit with data</span>
+<span class="kw">func</span> <span class="fn">add_score</span>(n: <span class="ty">int</span>) -> <span class="ty">void</span>:
+    _total += n
+    emit_signal(<span class="str">"score_changed"</span>, _total)</pre>
+    </div>
+    <div>
+      <pre><span class="cm"># Connect in another node</span>
+<span class="kw">func</span> <span class="fn">_ready</span>() -> <span class="ty">void</span>:
+    GameManager.game_over.connect(<span class="fn">_on_game_over</span>)
+    GameManager.score_changed.connect(<span class="fn">_on_score</span>)
+
+<span class="kw">func</span> <span class="fn">_on_game_over</span>() -> <span class="ty">void</span>:
+    <span class="fn">show_game_over_screen</span>()
+
+<span class="kw">func</span> <span class="fn">_on_score</span>(total: <span class="ty">int</span>) -> <span class="ty">void</span>:
+    _label.text = <span class="ty">str</span>(total)</pre>
+      <div class="highlight-box">
+        <strong>Prefer signals over polling.</strong> Don't check a global "is_game_over" flag every frame — emit a signal once when it happens.
+      </div>
+      <p style="margin-top:14px;">Lambdas also work for short handlers:</p>
+      <pre>_btn.pressed.connect(
+    <span class="kw">func</span>(): emit_signal(<span class="str">"pause_pressed"</span>)
+)</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 9 — Autoloads
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 07</h3>
+  <h2>Autoloads — Global Singletons</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Autoloads are scripts that Godot instantiates at startup and keeps alive for the entire session. They're accessible from any script by name — like C++ global managers.</p>
+      <p style="margin-top:10px;">Registered in <strong>Project → Project Settings → Autoload</strong> (or in <code>project.godot</code>):</p>
+      <pre>[autoload]
+SaveManager    = <span class="str">"*res://autoload/save_manager.gd"</span>
+AudioManager   = <span class="str">"*res://autoload/audio_manager.gd"</span>
+GameManager    = <span class="str">"*res://autoload/game_manager.gd"</span>
+ScoreModel     = <span class="str">"*res://autoload/score_model.gd"</span>
+LevelLoader    = <span class="str">"*res://autoload/level_loader.gd"</span>
+LeaderboardService = <span class="str">"*res://autoload/leaderboard_service.gd"</span></pre>
+    </div>
+    <div>
+      <pre><span class="cm"># Use from anywhere — no import needed</span>
+AudioManager.<span class="fn">play_music</span>()
+ScoreModel.<span class="fn">add_obstacle_avoided</span>()
+<span class="kw">if</span> SaveManager.<span class="fn">is_muted</span>():
+    AudioManager.<span class="fn">mute</span>()</pre>
+      <div class="divider"></div>
+      <table>
+        <tr><th>Autoload</th><th>Responsibility</th></tr>
+        <tr><td><code>GameManager</code></td><td>State machine, game_over signal</td></tr>
+        <tr><td><code>ScoreModel</code></td><td>Obstacle count × 100, score_changed signal</td></tr>
+        <tr><td><code>AudioManager</code></td><td>Music rotation, SFX, mute</td></tr>
+        <tr><td><code>SaveManager</code></td><td>user://save.json, best scores, settings</td></tr>
+        <tr><td><code>LevelLoader</code></td><td>JSON → LevelData cache</td></tr>
+        <tr><td><code>LeaderboardService</code></td><td>Google Play Games, no-op on non-Android</td></tr>
+      </table>
+      <div class="warn-box">
+        Don't put game logic in autoloads. They hold <em>state</em> and emit <em>signals</em> — not update loops.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 10 — Pure physics functions
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 08</h3>
+  <h2>Pure Physics Functions — Testable by Design</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>The <strong>most important architectural rule</strong>: all physics and collision logic must be pure static functions with no Node or scene-tree dependency.</p>
+      <pre><span class="cm"># scripts/physics/vehicle_physics.gd</span>
+<span class="kw">class_name</span> <span class="ty">VehiclePhysics</span>
+<span class="cm"># No "extends" — not a Node at all!</span>
+
+<span class="kw">const</span> <span class="co">MAX_PLAYER_JUMP</span>: <span class="ty">float</span> = <span class="num">140.0</span>
+<span class="kw">const</span> <span class="co">JUMP_DURATION</span>:   <span class="ty">float</span> = <span class="num">0.6</span>
+<span class="kw">const</span> <span class="co">DEFAULT_SPEED</span>:   <span class="ty">float</span> = <span class="num">11.0</span>
+
+<span class="kw">static func</span> <span class="fn">jump_arc_offset</span>(t: <span class="ty">float</span>) -> <span class="ty">float</span>:
+    <span class="kw">return</span> <span class="co">MAX_PLAYER_JUMP</span> * sin(t * <span class="co">PI</span>)
+
+<span class="kw">static func</span> <span class="fn">can_jump</span>(
+        airborne_h: <span class="ty">float</span>,
+        is_jumping: <span class="ty">bool</span>) -> <span class="ty">bool</span>:
+    <span class="kw">return</span> airborne_h <= <span class="num">1.0</span> <span class="kw">and not</span> is_jumping</pre>
+    </div>
+    <div>
+      <p><strong>Why pure functions?</strong></p>
+      <ul style="margin:14px 0;">
+        <li>Unit-testable without a running Godot editor</li>
+        <li>No mock nodes, no scene setup in tests</li>
+        <li>Logic is isolated from rendering/timing</li>
+        <li>Easy to port: same inputs → same outputs as C++</li>
+      </ul>
+      <div class="divider"></div>
+      <p><strong>The node calls the pure function:</strong></p>
+      <pre><span class="cm"># In base_vehicle.gd (the Node)</span>
+<span class="kw">func</span> <span class="fn">do_jump</span>() -> <span class="ty">void</span>:
+    <span class="kw">if not</span> <span class="ty">VehiclePhysics</span>.<span class="fn">can_jump</span>(
+            _airborne_height, _is_jumping):
+        <span class="kw">return</span>
+    _is_jumping = <span class="kw">true</span>
+    _jump_t     = <span class="num">0.0</span></pre>
+      <div class="success-box">
+        The node handles timing and state; the pure function handles math. Never the other way around.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 11 — Jump arc
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 09</h3>
+  <h2>Jump Arc — Sine, Not Parabola</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Cocos2d-x <code>JumpBy::create(0.6f, Vec2::ZERO, 140.0f, 1)</code> uses:</p>
+      <div class="highlight-box" style="font-family:monospace; font-size:1rem; text-align:center; padding:20px;">
+        y = height × |sin(π × t)|
+      </div>
+      <pre><span class="cm"># CORRECT — matches Cocos2d-x JumpBy</span>
+<span class="kw">static func</span> <span class="fn">jump_arc_offset</span>(t: <span class="ty">float</span>) -> <span class="ty">float</span>:
+    <span class="kw">return</span> <span class="co">MAX_PLAYER_JUMP</span> * sin(t * <span class="co">PI</span>)
+
+<span class="cm"># WRONG — parabola, do not use</span>
+<span class="kw">static func</span> <span class="fn">jump_arc_offset</span>(t: <span class="ty">float</span>) -> <span class="ty">float</span>:
+    <span class="kw">return</span> <span class="co">MAX_PLAYER_JUMP</span> * <span class="num">4.0</span> * t * (<span class="num">1.0</span> - t)</pre>
+      <div class="warn-box">
+        Both curves peak at the same height. The difference is <em>when</em> they hit the threshold for air-obstacle collision (~63 units). Sine: t≈0.149. Parabola: t≈0.129. Wrong formula = wrong difficulty.
+      </div>
+    </div>
+    <div>
+      <p><strong>Driving the arc in _physics_process:</strong></p>
+      <pre><span class="kw">var</span> _jump_t:     <span class="ty">float</span> = <span class="num">0.0</span>
+<span class="kw">var</span> _is_jumping: <span class="ty">bool</span>  = <span class="kw">false</span>
+<span class="kw">var</span> _player_y:   <span class="ty">float</span> = <span class="num">0.0</span>  <span class="cm"># ground level</span>
+
+<span class="kw">func</span> <span class="fn">_physics_process</span>(delta: <span class="ty">float</span>) -> <span class="ty">void</span>:
+    <span class="kw">if</span> _is_jumping:
+        _jump_t += delta / <span class="co">VehiclePhysics</span>.<span class="co">JUMP_DURATION</span>
+        <span class="kw">if</span> _jump_t >= <span class="num">1.0</span>:
+            _jump_t     = <span class="num">0.0</span>
+            _is_jumping = <span class="kw">false</span>
+            position.y  = _player_y
+        <span class="kw">else</span>:
+            position.y = _player_y + \
+                <span class="ty">VehiclePhysics</span>.<span class="fn">jump_arc_offset</span>(_jump_t)</pre>
+      <div class="divider"></div>
+      <p>Constants from C++ <code>BaseVehicle.hpp</code>:</p>
+      <table>
+        <tr><th>C++</th><th>GDScript</th></tr>
+        <tr><td><code>MAX_PLAYER_JUMP = 140.0f</code></td><td><code>MAX_PLAYER_JUMP: float = 140.0</code></td></tr>
+        <tr><td><code>JUMP_DURATION = 0.6f</code></td><td><code>JUMP_DURATION: float = 0.6</code></td></tr>
+        <tr><td><code>jumps = 1</code></td><td>single arc, no bounce</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 12 — Collision rects
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 10</h3>
+  <h2>Collision Rectangles</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Godot has built-in physics bodies, but for this game type <strong>manual rect intersection is more precise and easier to port</strong> from C++.</p>
+      <p style="margin-top:10px;">All C++ collision rects are expressed as fractions of <code>contentSize</code>. Port them exactly — never guess.</p>
+      <pre><span class="cm"># From BaseVehicle::getGroundCollision()</span>
+<span class="kw">static func</span> <span class="fn">ground_collision_rect</span>(
+        pos_x: <span class="ty">float</span>, player_y: <span class="ty">float</span>,
+        w: <span class="ty">float</span>, h: <span class="ty">float</span>) -> <span class="ty">Rect2</span>:
+    <span class="kw">return</span> <span class="ty">Rect2</span>(
+        pos_x - w*<span class="num">0.5</span> + w*<span class="num">0.3</span>,  <span class="cm"># x: 30% inset</span>
+        player_y,                   <span class="cm"># y: ground level</span>
+        w * <span class="num">0.55</span>,                  <span class="cm"># width:  55% of sprite</span>
+        h * <span class="num">0.3</span>                    <span class="cm"># height: 30% of sprite</span>
+    )</pre>
+    </div>
+    <div>
+      <pre><span class="cm"># From BaseVehicle::getAirCollision()</span>
+<span class="cm"># NOTE: height dimension uses WIDTH, not height</span>
+<span class="cm"># This is intentional in the C++ source!</span>
+<span class="kw">static func</span> <span class="fn">air_collision_rect</span>(
+        pos_x: <span class="ty">float</span>, pos_y: <span class="ty">float</span>,
+        w: <span class="ty">float</span>, h: <span class="ty">float</span>) -> <span class="ty">Rect2</span>:
+    <span class="kw">return</span> <span class="ty">Rect2</span>(
+        pos_x - w*<span class="num">0.5</span> + w*<span class="num">0.3</span>,
+        pos_y - h*<span class="num">0.5</span> + h*<span class="num">0.16</span>,
+        w * <span class="num">0.55</span>,
+        w * <span class="num">0.2</span>   <span class="cm"># uses w intentionally!</span>
+    )</pre>
+      <div class="divider"></div>
+      <p><strong>Intersection check:</strong></p>
+      <pre><span class="kw">if</span> vehicle_rect.intersects(obstacle_rect):
+    vehicle.<span class="fn">die</span>()</pre>
+      <div class="warn-box">
+        Read every collision rect from the original C++ source. Do not approximate or "eyeball" them — tiny differences change perceived fairness of the game.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 13 — Obstacle guards
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 11</h3>
+  <h2>Obstacle Collision Guards</h2>
+  <p style="margin-bottom:20px;">Each obstacle type has a <strong>guard check</strong> that runs before the rect intersection. If the guard returns false, the collision is skipped — even if rects overlap.</p>
+  <div class="cols cols-3">
+    <div class="card">
+      <h4 style="color:var(--accent3)">SingleObstacle<br><small style="color:var(--muted); font-weight:400;">Lane-band wall</small></h4>
+      <p>Player Y must be within the lane's vertical band.</p>
+      <pre style="font-size:0.75rem; margin-top:12px;"><span class="cm"># Guard</span>
+<span class="kw">var</span> y_eff = player_y + h * <span class="num">0.15</span>
+<span class="kw">if</span> y_eff < top <span class="kw">or</span> y_eff > top + h*<span class="num">0.37</span>:
+    <span class="kw">return false</span>  <span class="cm"># wrong lane</span>
+<span class="cm"># then check rect</span></pre>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--yellow)">DoubleObstacle<br><small style="color:var(--muted); font-weight:400;">Ground jump</small></h4>
+      <p>No guard — always collidable. Uses two collision rects (one per pillar).</p>
+      <pre style="font-size:0.75rem; margin-top:12px;"><span class="cm"># No guard, just rect check</span>
+<span class="kw">var</span> r1 = <span class="fn">rect_left</span>(obs)
+<span class="kw">var</span> r2 = <span class="fn">rect_right</span>(obs)
+<span class="kw">return</span> veh_rect.intersects(r1) \
+    <span class="kw">or</span> veh_rect.intersects(r2)</pre>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--accent2)">AirDoubleObstacle<br><small style="color:var(--muted); font-weight:400;">Air obstacle</small></h4>
+      <p>Player must be <em>jumping</em> AND above the height threshold.</p>
+      <pre style="font-size:0.75rem; margin-top:12px;"><span class="cm"># Guard 1: must be jumping</span>
+<span class="kw">if not</span> is_jumping: <span class="kw">return false</span>
+<span class="cm"># Guard 2: high enough</span>
+<span class="kw">if</span> airborne_h < <span class="num">63.0</span>: <span class="kw">return false</span>
+<span class="cm"># 63.0 = MAX_JUMP * 0.45</span></pre>
+    </div>
+  </div>
+  <div class="highlight-box" style="margin-top:20px;">
+    The 63-unit threshold (MAX_PLAYER_JUMP × 0.45) comes from <code>AirDoubleObstacle.cpp</code>. It means the player is only at risk during the top 55% of the jump arc — punishing reckless high jumps, not accidental ones.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 14 — Z-depth
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 12</h3>
+  <h2>Z-Depth Ordering</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Cocos2d-x uses <code>setLocalZOrder(z)</code>. Godot uses <code>z_index</code> on Node2D — higher value renders in front.</p>
+      <p style="margin-top:10px;">The C++ <code>GameDeep</code> enum defines z values per layer. Convert using:</p>
+      <div class="highlight-box" style="font-family:monospace; text-align:center; font-size:1.1rem; padding:20px;">
+        z_index = int((WIN_H − z_param) / 10)
+      </div>
+      <p>where <code>WIN_H = 768</code> and <code>z_param</code> is the Cocos z value. Higher z_param → lower z_index → behind.</p>
+    </div>
+    <div>
+      <table>
+        <tr><th>Layer</th><th>C++ z_param</th><th>Godot z_index</th></tr>
+        <tr><td>Air obstacle (front)</td><td>0</td><td><strong>76</strong></td></tr>
+        <tr><td>Player (dynamic)</td><td>lane_y ≈ 380</td><td><strong>~46</strong></td></tr>
+        <tr><td>Single obstacle</td><td>lane_y</td><td><strong>39–46</strong></td></tr>
+        <tr><td>Ground obstacle (back)</td><td>WIN_H × 0.5 = 384</td><td><strong>38</strong></td></tr>
+      </table>
+      <div class="divider"></div>
+      <p><strong>Player z_index must update every frame:</strong></p>
+      <pre><span class="kw">func</span> <span class="fn">_physics_process</span>(_delta: <span class="ty">float</span>) -> <span class="ty">void</span>:
+    <span class="kw">var</span> z_param := _player.player_y \
+        + _player.content_size.y * <span class="num">0.75</span>
+    _player.z_index = <span class="ty">int</span>(
+        (<span class="co">WIN_H</span> - z_param) / <span class="num">10.0</span>)</pre>
+      <div class="warn-box">
+        If you add obstacles as children AFTER the player in the scene tree and don't set z_index, all obstacles render in front of the player. Always set z_index explicitly at spawn time.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 15 — Input
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 13</h3>
+  <h2>Touch &amp; Mouse Input</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Godot delivers input as events. Handle them in <code>_unhandled_input</code> to avoid consuming events that UI nodes should receive first.</p>
+      <pre><span class="kw">func</span> <span class="fn">_unhandled_input</span>(event: <span class="ty">InputEvent</span>) -> <span class="ty">void</span>:
+    <span class="cm"># Mobile touch</span>
+    <span class="kw">if</span> event <span class="kw">is</span> <span class="ty">InputEventScreenTouch</span>:
+        <span class="fn">_handle_touch</span>(event)
+
+    <span class="cm"># Mobile drag (while touching)</span>
+    <span class="kw">elif</span> event <span class="kw">is</span> <span class="ty">InputEventScreenDrag</span>:
+        <span class="fn">_handle_drag</span>(event)
+
+    <span class="cm"># PC left mouse button</span>
+    <span class="kw">elif</span> event <span class="kw">is</span> <span class="ty">InputEventMouseButton</span> \
+         <span class="kw">and</span> event.button_index == <span class="ty">MOUSE_BUTTON_LEFT</span>:
+        <span class="fn">_handle_mouse_btn</span>(event)
+
+    <span class="cm"># PC mouse move (while pressed)</span>
+    <span class="kw">elif</span> event <span class="kw">is</span> <span class="ty">InputEventMouseMotion</span>:
+        <span class="fn">_handle_mouse_move</span>(event)</pre>
+    </div>
+    <div>
+      <p><strong>Screen split: left = joystick, right = jump</strong></p>
+      <pre><span class="kw">const</span> <span class="co">WIN_W</span>: <span class="ty">float</span> = <span class="num">1024.0</span>
+
+<span class="kw">func</span> <span class="fn">_handle_touch</span>(e: <span class="ty">InputEventScreenTouch</span>) -> <span class="ty">void</span>:
+    <span class="kw">var</span> left := e.position.x < <span class="co">WIN_W</span> * <span class="num">0.5</span>
+    <span class="kw">if</span> left <span class="kw">and</span> e.pressed:
+        <span class="fn">_start_joystick</span>(e.position, e.index)
+    <span class="kw">elif</span> e.index == _joy_index <span class="kw">and not</span> e.pressed:
+        <span class="fn">_stop_joystick</span>()
+    <span class="kw">elif not</span> left <span class="kw">and</span> e.pressed:
+        _player.<span class="fn">do_jump</span>()</pre>
+      <div class="highlight-box">
+        Use <code>event.index</code> (finger ID) to distinguish simultaneous touches. Track which finger owns the joystick — ignore drags from other fingers.
+      </div>
+      <div class="divider"></div>
+      <p><strong>Mouse mode:</strong> store <code>_joy_index = -1</code> to signal "mouse, not touch". Check <code>_joy_index == -1</code> in MouseMotion handler to avoid acting on stale state.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 16 — Joystick
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 14</h3>
+  <h2>Virtual Joystick Pattern</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>The virtual joystick is split across two nodes: <strong>game_scene.gd</strong> handles physics input (movement), <strong>hud.gd</strong> handles the thumb visual independently.</p>
+      <pre><span class="cm"># game_scene.gd — physics logic</span>
+<span class="kw">const</span> <span class="co">JOY_MAX_DIST</span>:  <span class="ty">float</span> = <span class="num">80.0</span>
+<span class="kw">const</span> <span class="co">JOY_DEAD_ZONE</span>: <span class="ty">float</span> = <span class="num">20.0</span>
+
+<span class="kw">var</span> _joy_active:    <span class="ty">bool</span>  = <span class="kw">false</span>
+<span class="kw">var</span> _joy_index:     <span class="ty">int</span>   = -<span class="num">1</span>  <span class="cm"># -1 = mouse</span>
+<span class="kw">var</span> _joy_anchor_x:  <span class="ty">float</span> = <span class="num">0.0</span>
+<span class="kw">var</span> _joy_anchor_y:  <span class="ty">float</span> = <span class="num">0.0</span>
+<span class="kw">var</span> _joy_norm_x:    <span class="ty">float</span> = <span class="num">0.0</span>  <span class="cm"># -1..1</span>
+<span class="kw">var</span> _joy_norm_y:    <span class="ty">float</span> = <span class="num">0.0</span>  <span class="cm"># -1..1</span>
+
+<span class="kw">func</span> <span class="fn">_update_joy</span>(pos: <span class="ty">Vector2</span>) -> <span class="ty">void</span>:
+    <span class="kw">var</span> dx := pos.x - _joy_anchor_x
+    <span class="kw">var</span> dy := pos.y - _joy_anchor_y
+    _joy_norm_x = clampf(dx / <span class="co">JOY_MAX_DIST</span>, -<span class="num">1</span>, <span class="num">1</span>)
+    _joy_norm_y = clampf(-dy / <span class="co">JOY_MAX_DIST</span>, -<span class="num">1</span>, <span class="num">1</span>)
+    <span class="kw">if</span> absf(dx) < <span class="co">JOY_DEAD_ZONE</span>: _joy_norm_x = <span class="num">0.0</span>
+    <span class="kw">if</span> absf(dy) < <span class="co">JOY_DEAD_ZONE</span>: _joy_norm_y = <span class="num">0.0</span></pre>
+    </div>
+    <div>
+      <pre><span class="cm"># Apply in _physics_process</span>
+<span class="kw">if</span> _joy_active:
+    <span class="kw">var</span> spd := <span class="ty">VehiclePhysics</span>.<span class="co">DEFAULT_SPEED</span> \
+               * delta * <span class="co">PHYSICS_FPS</span>
+    <span class="kw">var</span> vel := <span class="ty">Vector2</span>(
+        _joy_norm_x * spd,
+        _joy_norm_y * spd)
+    _player.<span class="fn">do_move</span>(vel, <span class="co">WIN_W</span>)</pre>
+      <div class="warn-box">
+        Pass both X AND Y to <code>do_move()</code>. The original C++ <code>HudLayer::updateControl</code> calls <code>doMove(Vec2)</code> with a full 2D vector. Passing only Y means the player can't move left/right.
+      </div>
+      <pre><span class="cm"># hud.gd — thumb visual (independent)</span>
+<span class="kw">const</span> <span class="co">THUMB_REST</span>: <span class="ty">Vector2</span> = <span class="ty">Vector2</span>(<span class="num">45</span>, <span class="num">45</span>)
+<span class="kw">const</span> <span class="co">JOY_RADIUS</span>: <span class="ty">float</span>   = <span class="num">45.0</span>
+
+<span class="kw">func</span> <span class="fn">_move_thumb</span>(dx: <span class="ty">float</span>, dy: <span class="ty">float</span>) -> <span class="ty">void</span>:
+    <span class="kw">var</span> nx := clampf(dx / <span class="co">JOY_MAX_DIST</span>, -<span class="num">1</span>, <span class="num">1</span>)
+    <span class="kw">var</span> ny := clampf(dy / <span class="co">JOY_MAX_DIST</span>, -<span class="num">1</span>, <span class="num">1</span>)
+    _joy_thumb.position = <span class="co">THUMB_REST</span> + \
+        <span class="ty">Vector2</span>(nx * <span class="co">JOY_RADIUS</span>, ny * <span class="co">JOY_RADIUS</span>)</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 17 — Parallax
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 15</h3>
+  <h2>Parallax Scrolling</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Cocos2d-x scrolls multiple background layers at different speeds (<code>MAX_PARALLAX = 5</code>). Port this as an array of Sprite2D nodes scrolled manually each frame.</p>
+      <pre><span class="cm"># 5 layers, slowest (sky) to fastest (track)</span>
+<span class="kw">const</span> <span class="co">PARALLAX_SPEEDS</span>: <span class="ty">Array</span>[<span class="ty">float</span>] = \
+    [<span class="num">0.1</span>, <span class="num">0.2</span>, <span class="num">0.4</span>, <span class="num">0.6</span>, <span class="num">1.0</span>]
+
+<span class="kw">@onready var</span> _layers: <span class="ty">Array</span>[<span class="ty">Sprite2D</span>] = [
+    $BG0, $BG1, $BG2, $BG3, $BG4
+]
+
+<span class="kw">func</span> <span class="fn">_scroll_parallax</span>(
+        world_speed: <span class="ty">float</span>,
+        delta: <span class="ty">float</span>) -> <span class="ty">void</span>:
+    <span class="kw">for</span> i <span class="kw">in range</span>(_layers.size()):
+        <span class="kw">var</span> layer := _layers[i]
+        layer.position.x -= world_speed \
+            * <span class="co">PARALLAX_SPEEDS</span>[i] * delta
+        <span class="cm"># Seamless wrap</span>
+        <span class="kw">if</span> layer.position.x < -<span class="co">WIN_W</span>:
+            layer.position.x += <span class="co">WIN_W</span> * <span class="num">2.0</span></pre>
+    </div>
+    <div>
+      <p><strong>Why each layer needs two copies:</strong></p>
+      <div class="diagram" style="padding:16px; font-size:0.8rem; line-height:2.2;">
+<span class="node">BG0</span>  [──── copy A ────][──── copy B ────]
+                  ↑ viewport ↑
+<span class="cm">When A scrolls off left edge:
+  A.position.x += WIN_W * 2   ← wraps to right</span>
+      </div>
+      <p style="margin-top:14px;">Godot has a built-in <code>ParallaxBackground</code> node, but manual scrolling is simpler to control and easier to port 1:1 from C++.</p>
+      <div class="divider"></div>
+      <p><strong>Godot alternative (built-in):</strong></p>
+      <pre><span class="cm"># ParallaxBackground → ParallaxLayer</span>
+<span class="cm"># motion_scale controls speed ratio</span>
+$ParallaxLayer.motion_scale = <span class="ty">Vector2</span>(<span class="num">0.1</span>, <span class="num">0</span>)
+<span class="cm"># Simpler but less direct mapping from C++</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 18 — Object pooling
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 16</h3>
+  <h2>Object Pooling</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Instantiating nodes mid-game causes hitches. Pool and recycle — same pattern as Cocos2d-x <code>ObstaclePool&lt;T&gt;</code>.</p>
+      <pre><span class="cm"># scripts/data/obstacle_pool.gd</span>
+<span class="kw">class_name</span> <span class="ty">ObstaclePool</span>
+
+<span class="kw">var</span> _scene:  <span class="ty">PackedScene</span>
+<span class="kw">var</span> _parent: <span class="ty">Node</span>
+<span class="kw">var</span> _pool:   <span class="ty">Array</span>[<span class="ty">BaseObstacle</span>] = []
+
+<span class="kw">func</span> <span class="fn">init</span>(scene: <span class="ty">PackedScene</span>,
+           parent: <span class="ty">Node</span>) -> <span class="ty">void</span>:
+    _scene  = scene
+    _parent = parent
+
+<span class="kw">func</span> <span class="fn">acquire</span>() -> <span class="ty">BaseObstacle</span>:
+    <span class="kw">for</span> obs <span class="kw">in</span> _pool:
+        <span class="kw">if not</span> obs.visible:
+            obs.visible = <span class="kw">true</span>
+            <span class="kw">return</span> obs
+    <span class="cm"># Pool exhausted — grow it</span>
+    <span class="kw">var</span> obs: <span class="ty">BaseObstacle</span> = _scene.instantiate()
+    _parent.<span class="fn">add_child</span>(obs)
+    _pool.<span class="fn">append</span>(obs)
+    <span class="kw">return</span> obs</pre>
+    </div>
+    <div>
+      <pre><span class="kw">func</span> <span class="fn">recycle</span>(obs: <span class="ty">BaseObstacle</span>) -> <span class="ty">void</span>:
+    obs.visible = <span class="kw">false</span>
+
+<span class="kw">func</span> <span class="fn">recycle_all</span>() -> <span class="ty">void</span>:
+    <span class="kw">for</span> obs <span class="kw">in</span> _pool:
+        obs.visible = <span class="kw">false</span></pre>
+      <div class="divider"></div>
+      <p><strong>Three separate pools — one per type:</strong></p>
+      <pre><span class="cm"># In game_scene.gd</span>
+<span class="kw">var</span> _single_pool: <span class="ty">ObstaclePool</span>
+<span class="kw">var</span> _double_pool: <span class="ty">ObstaclePool</span>
+<span class="kw">var</span> _air_pool:    <span class="ty">ObstaclePool</span>
+
+<span class="kw">func</span> <span class="fn">_ready</span>() -> <span class="ty">void</span>:
+    _single_pool = <span class="ty">ObstaclePool</span>.new()
+    _single_pool.<span class="fn">init</span>(
+        preload(<span class="str">"res://scenes/obstacles/single_obstacle.tscn"</span>),
+        $ObstacleRoot)</pre>
+      <div class="highlight-box">
+        Recycle means <code>visible = false</code>, not <code>queue_free()</code>. The node stays in the scene tree and gets reused next spawn.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 19 — Scoring & world speed
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 17</h3>
+  <h2>Scoring &amp; World Speed</h2>
+  <div class="cols cols-2">
+    <div>
+      <p><strong>Scoring</strong> (from <code>ScoreModel.hpp</code>):</p>
+      <pre><span class="kw">const</span> <span class="co">K_SCORE_FACTOR</span>: <span class="ty">float</span> = <span class="num">100.0</span>
+
+<span class="kw">var</span> _obstacles_avoided: <span class="ty">int</span> = <span class="num">0</span>
+
+<span class="kw">func</span> <span class="fn">add_obstacle_avoided</span>() -> <span class="ty">void</span>:
+    _obstacles_avoided += <span class="num">1</span>
+    emit_signal(<span class="str">"score_changed"</span>,
+        <span class="fn">get_total_score</span>())
+
+<span class="kw">func</span> <span class="fn">get_total_score</span>() -> <span class="ty">int</span>:
+    <span class="kw">return</span> <span class="ty">int</span>(_obstacles_avoided * <span class="co">K_SCORE_FACTOR</span>)</pre>
+      <div class="warn-box">
+        Track <em>count of obstacles avoided</em>, not distance or time. Multiply by 100 only for display. This matches C++ exactly.
+      </div>
+    </div>
+    <div>
+      <p><strong>World speed</strong> (from <code>GameLayer.cpp</code>):</p>
+      <pre><span class="cm"># From Constants.h</span>
+<span class="kw">const</span> <span class="co">START_WORLD_SPEED</span>:  <span class="ty">float</span> = <span class="num">512.0</span>
+<span class="cm"># designWidth * 0.5  (1024 * 0.5)</span>
+<span class="kw">const</span> <span class="co">MIN_DISTANCE</span>:       <span class="ty">float</span> = <span class="num">568.89</span>
+<span class="cm"># designWidth / 1.8</span>
+<span class="kw">const</span> <span class="co">START_X_OBSTACLES</span>:  <span class="ty">float</span> = <span class="num">1945.6</span>
+<span class="cm"># designWidth * 1.9</span>
+
+<span class="cm"># Advance each frame</span>
+<span class="kw">func</span> <span class="fn">_advance_world</span>(delta: <span class="ty">float</span>) -> <span class="ty">void</span>:
+    _world_speed += \
+        _level.speed_increase * delta
+    _world_speed = minf(
+        _world_speed, _level.max_speed)</pre>
+      <div class="highlight-box">
+        All speed constants derive from <code>designWidth = 1024</code>. Never hardcode the arithmetic result without a comment showing the formula.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 20 — Testing with GUT
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 18</h3>
+  <h2>Testing with GUT</h2>
+  <div class="cols cols-2">
+    <div>
+      <p><strong>GUT</strong> (Godot Unit Test) is a test framework vendored in <code>addons/gut/</code>. Tests are GDScript files with names starting <code>test_</code>.</p>
+      <pre><span class="cm"># tests/unit/test_vehicle_physics.gd</span>
+<span class="kw">extends</span> <span class="str">"res://addons/gut/test.gd"</span>
+
+<span class="kw">func</span> <span class="fn">test_jump_arc_at_midpoint</span>() -> <span class="ty">void</span>:
+    <span class="kw">var</span> y := <span class="ty">VehiclePhysics</span>.<span class="fn">jump_arc_offset</span>(<span class="num">0.5</span>)
+    <span class="cm"># sin(π/2) = 1.0 → peak = MAX_JUMP</span>
+    assert_almost_eq(y, <span class="num">140.0</span>, <span class="num">0.001</span>)
+
+<span class="kw">func</span> <span class="fn">test_cannot_jump_when_airborne</span>() -> <span class="ty">void</span>:
+    assert_false(<span class="ty">VehiclePhysics</span>.<span class="fn">can_jump</span>(<span class="num">10.0</span>, <span class="kw">false</span>))
+
+<span class="kw">func</span> <span class="fn">test_can_jump_when_grounded</span>() -> <span class="ty">void</span>:
+    assert_true(<span class="ty">VehiclePhysics</span>.<span class="fn">can_jump</span>(<span class="num">0.5</span>, <span class="kw">false</span>))
+
+<span class="kw">func</span> <span class="fn">test_air_guard_below_threshold</span>() -> <span class="ty">void</span>:
+    <span class="cm"># 50 < 63 → should NOT collide</span>
+    assert_false(<span class="ty">ObstaclePhysics</span>.<span class="fn">check_air_guard</span>(
+        <span class="num">50.0</span>, <span class="kw">true</span>))</pre>
+    </div>
+    <div>
+      <p><strong>Run headless (CI / terminal):</strong></p>
+      <pre>godot --headless --path . \
+  -s addons/gut/gut_cmdln.gd \
+  -gdir=res://tests \
+  -gprefix=test_ \
+  -ginclude_subdirs \
+  -gexit</pre>
+      <p style="margin-top:14px;"><strong>Run a single file:</strong></p>
+      <pre>godot --headless --path . \
+  -s addons/gut/gut_cmdln.gd \
+  -gtest=res://tests/unit/test_vehicle_physics.gd \
+  -gexit</pre>
+      <div class="divider"></div>
+      <p><strong>GUT assert methods:</strong></p>
+      <table>
+        <tr><th>Method</th><th>Checks</th></tr>
+        <tr><td><code>assert_eq(a, b)</code></td><td>a == b</td></tr>
+        <tr><td><code>assert_almost_eq(a, b, tol)</code></td><td>|a-b| &lt; tol</td></tr>
+        <tr><td><code>assert_true(x)</code></td><td>x is true</td></tr>
+        <tr><td><code>assert_false(x)</code></td><td>x is false</td></tr>
+        <tr><td><code>assert_null(x)</code></td><td>x is null</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 21 — Android & Leaderboards
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 19</h3>
+  <h2>Android Export &amp; Leaderboards</h2>
+  <div class="cols cols-2">
+    <div>
+      <p>Google Play Games Services runs only on Android. The Godot plugin is loaded at runtime — always check availability before calling any method.</p>
+      <pre><span class="cm"># autoload/leaderboard_service.gd</span>
+<span class="kw">var</span> _available: <span class="ty">bool</span> = <span class="kw">false</span>
+<span class="kw">var</span> _signed_in: <span class="ty">bool</span> = <span class="kw">false</span>
+
+<span class="kw">func</span> <span class="fn">_ready</span>() -> <span class="ty">void</span>:
+    _available = Engine.<span class="fn">has_singleton</span>(
+        <span class="str">"GodotPlayGameServices"</span>)
+    <span class="kw">if</span> _available:
+        <span class="fn">_try_sign_in</span>()
+
+<span class="kw">func</span> <span class="fn">submit_score</span>(
+        leaderboard_id: <span class="ty">String</span>,
+        score: <span class="ty">int</span>) -> <span class="ty">void</span>:
+    <span class="kw">if not</span> _available <span class="kw">or not</span> _signed_in:
+        <span class="kw">return</span>  <span class="cm"># fail silently — never block gameplay</span>
+    <span class="kw">var</span> plugin = Engine.<span class="fn">get_singleton</span>(
+        <span class="str">"GodotPlayGameServices"</span>)
+    plugin.<span class="fn">submitScore</span>(leaderboard_id, score)</pre>
+    </div>
+    <div>
+      <p><strong>Key principles:</strong></p>
+      <ul style="margin:14px 0;">
+        <li>Leaderboard / achievement IDs are <strong>public identifiers</strong> — safe to commit, same as in C++ <code>Constants.h</code></li>
+        <li>A sign-in failure must <strong>never block gameplay</strong> — always fail silently</li>
+        <li>Use <code>Engine.has_singleton()</code> to detect plugin availability — works on any platform</li>
+        <li>iOS / Game Center: keep the interface platform-agnostic; don't build an iOS backend now</li>
+      </ul>
+      <div class="divider"></div>
+      <p><strong>Level → leaderboard mapping:</strong></p>
+      <pre><span class="kw">func</span> <span class="fn">submit_score_for_level</span>(
+        level: <span class="ty">String</span>, score: <span class="ty">int</span>) -> <span class="ty">void</span>:
+    <span class="kw">match</span> level:
+        <span class="str">"easy"</span>:   <span class="fn">submit_score</span>(<span class="co">LEAD_EASY_MODE</span>,   score)
+        <span class="str">"normal"</span>: <span class="fn">submit_score</span>(<span class="co">LEAD_NORMAL_MODE</span>, score)
+        <span class="str">"hard"</span>:   <span class="fn">submit_score</span>(<span class="co">LEAD_HARD_MODE</span>,   score)</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 22 — Parity checklist
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Chapter 20</h3>
+  <h2>Parity Checklist</h2>
+  <p>Before calling any ported system complete, verify all of these:</p>
+  <div class="cols cols-2" style="margin-top:16px;">
+    <div>
+      <div class="card">
+        <h4>Physics</h4>
+        <ul style="font-size:0.88rem; margin-top:8px;">
+          <li>All constants read from C++ source — not guessed</li>
+          <li>Jump arc uses <code>sin(πt)</code>, not <code>4t(1-t)</code></li>
+          <li>Air obstacle guard threshold = <code>MAX_JUMP × 0.45</code> = 63.0</li>
+          <li>Collision rect fractions match C++ <code>contentSize</code> fractions</li>
+          <li>SingleObstacle lane-band guard applied before rect check</li>
+        </ul>
+      </div>
+      <div class="card" style="margin-top:12px;">
+        <h4>Rendering</h4>
+        <ul style="font-size:0.88rem; margin-top:8px;">
+          <li>Root node has <code>scale=(1,-1)</code>, <code>position=(0,WIN_H)</code></li>
+          <li>All Sprite2D children counter-flipped</li>
+          <li>Z-index formula applied at spawn: <code>int((WIN_H-z)/10)</code></li>
+          <li>Player z_index updated every frame from current Y</li>
+          <li>UI on CanvasLayer — not inside Y-flipped game world</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h4>Input &amp; Gameplay</h4>
+        <ul style="font-size:0.88rem; margin-top:8px;">
+          <li>Joystick passes <em>both</em> X and Y to <code>do_move(Vector2)</code></li>
+          <li>Touch and mouse both handled in <code>_unhandled_input</code></li>
+          <li>Joystick thumb visual moves in HUD independently</li>
+          <li>Scoring = <code>obstacles_avoided × 100</code>, not distance</li>
+          <li>World speed starts at 512.0, increases per level JSON</li>
+        </ul>
+      </div>
+      <div class="card" style="margin-top:12px;">
+        <h4>Tests</h4>
+        <ul style="font-size:0.88rem; margin-top:8px;">
+          <li>Pure physics functions have unit tests</li>
+          <li>Golden-run regression tests cover all 3 obstacle types</li>
+          <li>All tests pass headless: <code>godot --headless … -gexit</code></li>
+          <li>CI runs tests on every push</li>
+          <li>No test mocks game world nodes — pure function tests only</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 23 — Quick reference
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <h3>Bonus</h3>
+  <h2>Quick Reference — C++ → GDScript</h2>
+  <div class="cols cols-2">
+    <div>
+      <table>
+        <tr><th>Cocos2d-x</th><th>Godot 4 GDScript</th></tr>
+        <tr><td><code>CCSprite</code></td><td><code>Sprite2D</code></td></tr>
+        <tr><td><code>CCNode</code></td><td><code>Node2D</code></td></tr>
+        <tr><td><code>CCLayer</code></td><td><code>Node2D</code> or <code>CanvasLayer</code></td></tr>
+        <tr><td><code>CCLabelTTF</code></td><td><code>Label</code></td></tr>
+        <tr><td><code>CCMenuItemImage</code></td><td><code>TextureButton</code></td></tr>
+        <tr><td><code>JumpBy</code></td><td>manual sine accumulator</td></tr>
+        <tr><td><code>MoveTo</code></td><td><code>Tween</code> or manual</td></tr>
+        <tr><td><code>update(dt)</code></td><td><code>_physics_process(delta)</code></td></tr>
+        <tr><td><code>scheduleOnce</code></td><td><code>get_tree().create_timer(t)</code></td></tr>
+        <tr><td><code>CC_BROADCAST</code></td><td><code>signal</code> + <code>emit_signal</code></td></tr>
+        <tr><td><code>Director::getInstance()</code></td><td>Autoload singleton</td></tr>
+        <tr><td><code>setLocalZOrder(z)</code></td><td><code>z_index = z</code></td></tr>
+        <tr><td><code>Rect::intersectsRect</code></td><td><code>Rect2.intersects()</code></td></tr>
+        <tr><td><code>Vec2</code></td><td><code>Vector2</code></td></tr>
+        <tr><td><code>Size</code></td><td><code>Vector2</code></td></tr>
+      </table>
+    </div>
+    <div>
+      <table>
+        <tr><th>Pattern</th><th>GDScript idiom</th></tr>
+        <tr><td>Singleton</td><td><code>extends Node</code> registered as Autoload</td></tr>
+        <tr><td>Pooling</td><td><code>visible = false</code> to recycle</td></tr>
+        <tr><td>Event</td><td><code>signal</code> + <code>.connect()</code></td></tr>
+        <tr><td>Fixed update</td><td><code>_physics_process</code></td></tr>
+        <tr><td>Timer</td><td><code>get_tree().create_timer(sec).timeout</code></td></tr>
+        <tr><td>Load scene</td><td><code>preload("res://…")</code> or <code>load()</code></td></tr>
+        <tr><td>Spawn node</td><td><code>scene.instantiate()</code> + <code>add_child()</code></td></tr>
+        <tr><td>Remove node</td><td><code>node.queue_free()</code></td></tr>
+        <tr><td>Save to disk</td><td><code>FileAccess.open("user://…")</code></td></tr>
+        <tr><td>JSON parse</td><td><code>JSON.parse_string(text)</code></td></tr>
+        <tr><td>Clamp float</td><td><code>clampf(v, min, max)</code></td></tr>
+        <tr><td>Abs float</td><td><code>absf(v)</code></td></tr>
+        <tr><td>Min/max float</td><td><code>minf(a,b)</code> / <code>maxf(a,b)</code></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 24 — End
+═══════════════════════════════════════════════════════════════ -->
+<div class="slide title-slide">
+  <div class="chapter-badge">✅ Complete</div>
+  <h1>You're ready to<br><span class="title-accent">port to Godot 4</span></h1>
+  <p class="subtitle">All patterns above are production-tested in the Turbo Race migration.<br>Every constant and formula came directly from reading the C++ source.</p>
+  <div class="divider" style="margin:32px 0 24px;"></div>
+  <p><strong>Source code:</strong> <code>github.com/cpinan/turbo-race-godot</code></p>
+  <p style="margin-top:8px;"><strong>Claude Code skill:</strong> copy <code>.claude/skills/cocos2dx-to-godot/SKILL.md</code> into your project and invoke <code>/cocos2dx-to-godot</code></p>
+  <p style="margin-top:8px;"><strong>Tests:</strong> <code>godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests -gexit</code></p>
+  <div style="margin-top:28px; display:flex; gap:10px; flex-wrap:wrap;">
+    <span class="tag tag-purple">Godot 4.7</span>
+    <span class="tag tag-teal">GDScript</span>
+    <span class="tag tag-green">116 tests passing</span>
+    <span class="tag tag-yellow">Behavioral parity</span>
+    <span class="tag tag-red">Cocos2d-x → Godot</span>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- ── Navigation ──────────────────────────────────────────── -->
+<div id="nav">
+  <button class="nav-btn" id="btn-prev" onclick="prev()" disabled>← Prev</button>
+  <div id="progress-wrap">
+    <span id="slide-num">1 / 24</span>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+  </div>
+  <button class="nav-btn" id="btn-next" onclick="next()">Next →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total  = slides.length;
+  let   cur    = 0;
+
+  function goTo(n) {
+    if (n < 0 || n >= total) return;
+    slides[cur].classList.remove('active');
+    cur = n;
+    slides[cur].classList.add('active');
+    slides[cur].scrollTop = 0;
+    document.getElementById('slide-num').textContent = (cur+1) + ' / ' + total;
+    document.getElementById('progress-fill').style.width =
+      ((cur + 1) / total * 100) + '%';
+    document.getElementById('btn-prev').disabled = cur === 0;
+    document.getElementById('btn-next').disabled = cur === total - 1;
+  }
+
+  function next() { goTo(cur + 1); }
+  function prev() { goTo(cur - 1); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown')  next();
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')    prev();
+    if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  // Touch swipe
+  let _tx = 0;
+  document.addEventListener('touchstart', e => { _tx = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend',   e => {
+    const dx = _tx - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 50) dx > 0 ? next() : prev();
+  }, {passive:true});
+
+  // Init
+  goTo(0);
+</script>
+</body>
+</html>
