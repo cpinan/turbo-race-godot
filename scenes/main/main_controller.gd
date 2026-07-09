@@ -74,5 +74,6 @@ func _go_home() -> void:
 
 func _on_game_over() -> void:
 	AudioManager.stop_music()
+	await get_tree().create_timer(1.5).timeout
 	var score: GameScore = ScoreModel.current_score()
 	_game_over.show_result(_current_level, score)
