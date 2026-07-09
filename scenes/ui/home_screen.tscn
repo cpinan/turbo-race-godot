@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://ds7bph3kl2m5n"]
+[gd_scene load_steps=11 format=3 uid="uid://ds7bph3kl2m5n"]
 
 [ext_resource type="Script" path="res://scenes/ui/home_screen.gd" id="1"]
 [ext_resource type="Texture2D" path="res://resources/assets/tablero_title.png" id="2"]
@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" path="res://resources/assets/medium.png" id="7"]
 [ext_resource type="Texture2D" path="res://resources/assets/hard_off.png" id="8"]
 [ext_resource type="Texture2D" path="res://resources/assets/hard.png" id="9"]
+[ext_resource type="FontFile" path="res://resources/fonts/Carton_Six.ttf" id="10"]
 
 [node name="HomeScreen" type="CanvasLayer"]
 layer = 10
@@ -63,3 +64,16 @@ offset_left = 38.0
 offset_top = 652.0
 offset_right = 138.0
 offset_bottom = 747.0
+
+[node name="BtnHowToPlay" type="Button" parent="Menu"]
+offset_left = 780.0
+offset_top = 640.0
+offset_right = 1010.0
+offset_bottom = 700.0
+theme_override_fonts/font = ExtResource("10")
+theme_override_font_sizes/font_size = 38
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+flat = true
+text = "How to Play"

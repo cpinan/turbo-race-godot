@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://bw4kvm1jx9t6e"]
+[gd_scene load_steps=7 format=3 uid="uid://bw4kvm1jx9t6e"]
 
 [ext_resource type="Script" path="res://scenes/ui/hud.gd" id="1"]
 [ext_resource type="Texture2D" path="res://resources/assets/pause_off.png" id="2"]
 [ext_resource type="Texture2D" path="res://resources/assets/pause.png" id="3"]
 [ext_resource type="Texture2D" path="res://resources/assets/joystick.png" id="4"]
 [ext_resource type="Texture2D" path="res://resources/assets/joy_L.png" id="5"]
+[ext_resource type="FontFile" path="res://resources/fonts/Carton_Six.ttf" id="6"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 1
@@ -14,7 +15,9 @@ script = ExtResource("1")
 offset_left = 700.0
 offset_top = 10.0
 offset_right = 1014.0
-offset_bottom = 60.0
+offset_bottom = 70.0
+theme_override_fonts/font = ExtResource("6")
+theme_override_font_sizes/font_size = 45
 text = "0"
 horizontal_alignment = 2
 

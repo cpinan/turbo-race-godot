@@ -8,6 +8,7 @@ extends Node
 @onready var _game_over:    GameOverScreen = $GameOverScreen
 
 var _current_level: String = "easy"
+var _show_tutorial: bool   = false
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -19,23 +20,16 @@ func _input(event: InputEvent) -> void:
 			get_tree().quit()
 
 func _ready() -> void:
-	# Show home screen on launch
 	_show_home()
 
-	# Wire HUD
 	_hud.pause_pressed.connect(_on_pause)
-
-	# Wire pause screen
 	_pause_screen.resume_pressed.connect(_on_resume)
 	_pause_screen.restart_pressed.connect(func(): _restart())
 	_pause_screen.home_pressed.connect(func(): _go_home())
-
-	# Wire game over
 	_game_over.restart_pressed.connect(func(): _restart())
 	_game_over.home_pressed.connect(func(): _go_home())
-
-	# Wire GameManager game_over signal
 	GameManager.game_over.connect(_on_game_over)
+	_game_scene.entrance_done.connect(_on_entrance_done)
 
 func _show_home() -> void:
 	_hud.hide_hud()
@@ -46,12 +40,32 @@ func _show_home() -> void:
 	var home: HomeScreen = home_scene.instantiate()
 	add_child(home)
 	home.level_selected.connect(_on_level_selected)
+	home.how_to_play_pressed.connect(_on_how_to_play)
 
 func _on_level_selected(level_name: String) -> void:
+	_show_tutorial = false
 	_current_level = level_name
 	_game_scene.restart(level_name)
 	_hud.show_hud()
 	AudioManager.play_music()
+
+func _on_how_to_play() -> void:
+	_show_tutorial = true
+	_current_level = "easy"
+	_game_scene.restart("easy")
+	_hud.show_hud()
+	AudioManager.play_music()
+
+func _on_entrance_done() -> void:
+	if _show_tutorial:
+		_show_tutorial = false
+		var overlay_scene: PackedScene = load("res://scenes/ui/tutorial_overlay.tscn")
+		var overlay: TutorialOverlay = overlay_scene.instantiate()
+		add_child(overlay)
+		overlay.dismissed.connect(func():
+			GameManager.set_state(GameManager.GameState.READY))
+	else:
+		GameManager.set_state(GameManager.GameState.READY)
 
 func _on_pause() -> void:
 	_game_scene.pause()

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://at8jnf4yp7w2h"]
+[gd_scene load_steps=9 format=3 uid="uid://at8jnf4yp7w2h"]
 
 [ext_resource type="Script" path="res://scenes/ui/game_over_screen.gd" id="1"]
 [ext_resource type="Texture2D" path="res://resources/assets/gameover_screen.png" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" path="res://resources/assets/pause_home.png" id="5"]
 [ext_resource type="Texture2D" path="res://resources/assets/pause_replay_off.png" id="6"]
 [ext_resource type="Texture2D" path="res://resources/assets/pause_replay.png" id="7"]
+[ext_resource type="FontFile" path="res://resources/fonts/Carton_Six.ttf" id="8"]
 
 [node name="GameOverScreen" type="CanvasLayer"]
 layer = 3
@@ -34,18 +35,22 @@ offset_bottom = 240.0
 texture = ExtResource("3")
 
 [node name="ScoreLabel" type="Label" parent="BG"]
-offset_left = 272.0
+offset_left = 160.0
 offset_top = 238.0
 offset_right = 500.0
-offset_bottom = 268.0
+offset_bottom = 278.0
+theme_override_fonts/font = ExtResource("8")
+theme_override_font_sizes/font_size = 32
 text = ""
 horizontal_alignment = 0
 
 [node name="BestLabel" type="Label" parent="BG"]
-offset_left = 272.0
-offset_top = 274.0
+offset_left = 160.0
+offset_top = 280.0
 offset_right = 500.0
-offset_bottom = 304.0
+offset_bottom = 320.0
+theme_override_fonts/font = ExtResource("8")
+theme_override_font_sizes/font_size = 32
 text = ""
 horizontal_alignment = 0
 

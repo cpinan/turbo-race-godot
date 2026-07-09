@@ -4,6 +4,8 @@ extends Node2D
 # Orchestrates the full play loop.
 # Mirrors GameLayer.cpp: spawning, parallax, collision, scoring, game-over.
 
+signal entrance_done
+
 const PREFILL_SINGLE: int = 12   # easy.json starts with 10 consecutive singles
 const PREFILL_DOUBLE: int = 6
 const PREFILL_AIR:    int = 6
@@ -165,11 +167,11 @@ func restart(level_name: String) -> void:
 			BaseObstacle.ObstacleType.JUMP:   _double_pool.recycle(obs)
 			BaseObstacle.ObstacleType.NORMAL: _air_pool.recycle(obs)
 
-	# Reset player to start position.
+	# Start player off-screen left; tween to play position over 1.5s (mirrors C++ Starting state).
 	if _player:
 		var center_y: float   = _lane.player_start_y + _lane.wall_height * 0.5
 		_player.position.y    = center_y
-		_player.position.x    = _player.content_size.x * 2.5
+		_player.position.x    = -_player.content_size.x * 2.5
 		_player.player_y      = center_y - _player.content_size.y * 0.5
 		_player.reset_state()
 
@@ -179,7 +181,7 @@ func restart(level_name: String) -> void:
 	GameManager.configure(level_name, _lane)
 	GameManager.game_over.connect(_on_game_over)
 	_spawn_initial_obstacles()
-	GameManager.set_state(GameManager.GameState.READY)
+	GameManager.set_state(GameManager.GameState.STARTING)
 
 # ---------------------------------------------------------------------------
 # Obstacle spawning — mirrors GameLayer::_spawnObstacleGroup
@@ -250,7 +252,25 @@ func _recycle_obstacle(obs: BaseObstacle) -> void:
 # ---------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
-	if _paused or GameManager.game_state != GameManager.GameState.READY:
+	if _paused:
+		return
+
+	# STARTING → kick off entrance tween, advance to PREPARING.
+	if GameManager.game_state == GameManager.GameState.STARTING:
+		GameManager.set_state(GameManager.GameState.PREPARING)
+		if _player:
+			var target_x: float = _player.content_size.x * 2.5
+			var tw := _player.create_tween()
+			tw.tween_property(_player, "position:x", target_x, 1.5)
+			tw.tween_callback(_on_entrance_done)
+		return
+
+	# PREPARING → wait for entrance tween (handled via callback).
+	if GameManager.game_state == GameManager.GameState.PREPARING:
+		_update_parallax(delta)
+		return
+
+	if GameManager.game_state != GameManager.GameState.READY:
 		return
 
 	# Apply movement — virtual joystick (left-half touch drag).
@@ -431,3 +451,6 @@ func resume() -> void:
 
 func _on_game_over() -> void:
 	_paused = true
+
+func _on_entrance_done() -> void:
+	emit_signal("entrance_done")
