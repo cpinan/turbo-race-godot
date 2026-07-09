@@ -2,7 +2,7 @@ class_name HomeScreen
 extends CanvasLayer
 
 # Mirrors HomeLayer.cpp
-# Shows logo, level buttons (easy/normal/hard), sound toggle, settings.
+# Shows logo, level buttons (easy/normal/hard), sound toggle.
 
 signal level_selected(level_name: String)
 
@@ -10,15 +10,13 @@ const HIDE_TIME: float = 0.4
 
 var _disabled: bool = false
 
-@onready var _logo:         TextureRect = $Logo
-@onready var _tablero:      TextureRect = $Tablero
-@onready var _menu:         Control = $Menu
-@onready var _btn_easy:     TextureButton = $Menu/BtnEasy
-@onready var _btn_normal:   TextureButton = $Menu/BtnNormal
-@onready var _btn_hard:     TextureButton = $Menu/BtnHard
-@onready var _btn_sound:    TextureButton = $Menu/BtnSound
-@onready var _btn_settings: TextureButton = $Menu/BtnSettings
-@onready var _settings_overlay: Control = $SettingsOverlay
+@onready var _logo:      TextureRect   = $Logo
+@onready var _tablero:   TextureRect   = $Tablero
+@onready var _menu:      Control       = $Menu
+@onready var _btn_easy:  TextureButton = $Menu/BtnEasy
+@onready var _btn_normal: TextureButton = $Menu/BtnNormal
+@onready var _btn_hard:  TextureButton = $Menu/BtnHard
+@onready var _btn_sound: TextureButton = $Menu/BtnSound
 
 func _ready() -> void:
 	# Hide menu while logo slides in — show after animation completes
@@ -38,7 +36,6 @@ func _ready() -> void:
 	_btn_normal.pressed.connect(func(): _on_level("normal"))
 	_btn_hard.pressed.connect(func(): _on_level("hard"))
 	_btn_sound.pressed.connect(_on_sound)
-	_btn_settings.pressed.connect(_on_settings)
 
 func _on_level(level_name: String) -> void:
 	if _disabled:
@@ -56,17 +53,6 @@ func _on_sound() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_BUTTON)
 	AudioManager.set_mute(!SaveManager.is_mute())
 	_update_sound_btn()
-
-func _on_settings() -> void:
-	if _disabled:
-		return
-	AudioManager.play_sfx(AudioManager.SFX_BUTTON)
-	_settings_overlay.visible = true
-	_disabled = true
-
-func resume_from_settings() -> void:
-	_settings_overlay.visible = false
-	_disabled = false
 
 func _update_sound_btn() -> void:
 	if _btn_sound == null:
@@ -86,7 +72,5 @@ func _animate_hide() -> void:
 		if node:
 			tween.tween_property(node, "position",
 				node.position + off_left, HIDE_TIME)
-	for node in [_btn_settings, _logo]:
-		if node:
-			tween.tween_property(node, "position",
-				node.position + off_right, HIDE_TIME)
+	tween.tween_property(_logo, "position",
+		_logo.position + off_right, HIDE_TIME)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://ds7bph3kl2m5n"]
+[gd_scene load_steps=10 format=3 uid="uid://ds7bph3kl2m5n"]
 
 [ext_resource type="Script" path="res://scenes/ui/home_screen.gd" id="1"]
 [ext_resource type="Texture2D" path="res://resources/assets/tablero_title.png" id="2"]
@@ -9,9 +9,6 @@
 [ext_resource type="Texture2D" path="res://resources/assets/medium.png" id="7"]
 [ext_resource type="Texture2D" path="res://resources/assets/hard_off.png" id="8"]
 [ext_resource type="Texture2D" path="res://resources/assets/hard.png" id="9"]
-[ext_resource type="Texture2D" path="res://resources/assets/ajustes_off.png" id="10"]
-[ext_resource type="Texture2D" path="res://resources/assets/ajustes.png" id="11"]
-[ext_resource type="PackedScene" path="res://scenes/ui/settings_overlay.tscn" id="12"]
 
 [node name="HomeScreen" type="CanvasLayer"]
 layer = 10
@@ -61,19 +58,8 @@ offset_bottom = 630.0
 texture_normal = ExtResource("8")
 texture_pressed = ExtResource("9")
 
-[node name="BtnSettings" type="TextureButton" parent="Menu"]
-offset_left = 878.0
-offset_top = 637.0
-offset_right = 990.0
-offset_bottom = 746.0
-texture_normal = ExtResource("10")
-texture_pressed = ExtResource("11")
-
 [node name="BtnSound" type="TextureButton" parent="Menu"]
 offset_left = 38.0
 offset_top = 652.0
 offset_right = 138.0
 offset_bottom = 747.0
-
-[node name="SettingsOverlay" instance=ExtResource("12") parent="."]
-visible = false

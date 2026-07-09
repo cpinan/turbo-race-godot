@@ -22,17 +22,6 @@ func set_mute(v: bool) -> void:
 	_cfg.save(SAVE_PATH)
 
 # ---------------------------------------------------------------------------
-# Control type  (true = joypad, false = tilt/accel)
-# ---------------------------------------------------------------------------
-
-func is_using_joypad() -> bool:
-	return _cfg.get_value("controls", "joypad", true)
-
-func set_control_type(joypad: bool) -> void:
-	_cfg.set_value("controls", "joypad", joypad)
-	_cfg.save(SAVE_PATH)
-
-# ---------------------------------------------------------------------------
 # Best score per level
 # ---------------------------------------------------------------------------
 

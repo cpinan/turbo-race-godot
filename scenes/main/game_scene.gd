@@ -253,27 +253,11 @@ func _physics_process(delta: float) -> void:
 	if _paused or GameManager.game_state != GameManager.GameState.READY:
 		return
 
-	# Apply movement — joystick or accelerometer depending on control setting.
+	# Apply movement — virtual joystick (left-half touch drag).
 	if _player:
-		if SaveManager.is_using_joypad():
-			if _joy_active and (_joy_norm_x != 0.0 or _joy_norm_y != 0.0):
-				var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
-				_player.do_move(Vector2(_joy_norm_x * spd, _joy_norm_y * spd), WIN_W)
-		else:
-			# Mirrors GameLayer::didAccelerate: vel = accel * speed * 0.5 * speed * 0.5
-			# Godot returns m/s² (gravity ≈ 9.8); C++ Acceleration was normalized -1..1 → divide by 9.8
-			# Axis mapping: Cocos2d-x auto-rotates for landscape.
-			#   C++ accel.y (landscape up/down) = Godot raw.x (device physical x-axis)
-			#   C++ accel.x (landscape left/right) = Godot raw.y (device physical y-axis)
-			var raw: Vector3 = Input.get_accelerometer()
-			const GRAVITY: float = 9.8
-			var cpp_ax: float = raw.y / GRAVITY  # C++ accel.x in landscape
-			var cpp_ay: float = raw.x / GRAVITY  # C++ accel.y in landscape (controls lane)
+		if _joy_active and (_joy_norm_x != 0.0 or _joy_norm_y != 0.0):
 			var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
-			var vx: float = cpp_ax * spd * 0.5 * VehiclePhysics.DEFAULT_SPEED * 0.5
-			var vy: float = cpp_ay * spd * 0.5 * VehiclePhysics.DEFAULT_SPEED * 0.5
-			if vx != 0.0 or vy != 0.0:
-				_player.do_move(Vector2(vx, vy), WIN_W)
+			_player.do_move(Vector2(_joy_norm_x * spd, _joy_norm_y * spd), WIN_W)
 
 	# Dynamic z_index — mirrors C++ reorderChild(_player, z) in _updatePlayer.
 	# Formula: (WIN_H - (playerY + height*0.75)) / 10  ≈ 45 at center lane.
