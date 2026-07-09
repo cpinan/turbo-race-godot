@@ -33,7 +33,7 @@ GodotPlayGameServices="*uid://br5jdflguv57u"
 window/size/viewport_width=1024
 window/size/viewport_height=768
 window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
+window/stretch/aspect="ignore"
 
 [editor_plugins]
 

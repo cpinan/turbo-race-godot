@@ -337,10 +337,18 @@ if (rootProject.tasks.findByPath("copyReleaseAARToAppModule") != null) {
 }
 
 // Godot 4.7 copies .import sidecar files into res/ which Android rejects.
+// Also replaces generated splash_icon with a solid black shape to suppress the
+// Android 12+ mandatory splash screen (icon becomes invisible on black background).
 tasks.whenTaskAdded { task ->
     if (task.name.startsWith("merge") && task.name.endsWith("Resources")) {
         task.doFirst {
             fileTree(dir: "$projectDir/res", include: "**/*.import").each { it.delete() }
+            def splashWebp = new File("$projectDir/res/drawable/splash_icon.webp")
+            if (splashWebp.exists()) splashWebp.delete()
+            new File("$projectDir/res/drawable/splash_icon.xml").text =
+                '<?xml version="1.0" encoding="utf-8"?>' +
+                '<shape xmlns:android="http://schemas.android.com/apk/res/android">' +
+                '<solid android:color="#000000"/></shape>'
         }
     }
 }
