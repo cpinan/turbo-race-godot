@@ -8,6 +8,21 @@ The original C++ source lives at `../Turbo-Race/` (separate repo). It is the beh
 
 ---
 
+## Versions
+
+| Component | Version |
+|-----------|---------|
+| Godot Engine | 4.7.stable |
+| GUT (test framework) | 9.7.0 |
+| Android min SDK | 24 (Android 7.0) |
+| Android target SDK | 35 (Android 15) |
+| App version name | 1.0.0 |
+| App version code | 4 |
+| Package | `com.carlos.pinan.turborace.godot` |
+| GDScript | Static-typed throughout |
+
+---
+
 ## Requirements
 
 - Godot 4.7.x ([godotengine.org](https://godotengine.org/download))
@@ -61,7 +76,7 @@ turbo-race-godot/
 │   │   └── game_scene.gd           Spawning, parallax, per-frame collision + score, joystick input
 │   │
 │   ├── vehicles/
-│   │   ├── base_vehicle.gd         CharacterBody2D; delegates physics to VehiclePhysics.*
+│   │   ├── base_vehicle.gd         Node2D base; delegates physics to VehiclePhysics.*
 │   │   └── vehicle_frog.gd         VehicleFrog subclass (bicho sprites, 12/10 fps walk/jump anim)
 │   │
 │   ├── obstacles/
@@ -72,10 +87,11 @@ turbo-race-godot/
 │   │   └── wide_obstacle.gd        Phase 4 extension proof (no base class changes needed)
 │   │
 │   └── ui/
-│       ├── home_screen.tscn/.gd    Logo slide-in, level buttons, sound toggle, settings overlay
-│       ├── hud.tscn/.gd            Score label, pause button, animated joystick thumb
+│       ├── home_screen.tscn/.gd    Logo slide-in, level buttons (pulse anim), sound toggle
+│       ├── hud.tscn/.gd            Score label, pause button, joystick thumb, song-now-playing label
 │       ├── pause_screen.tscn/.gd   Resume / Restart / Home
-│       ├── game_over_screen.tscn/.gd  Score display, best-score badge, Restart / Home
+│       ├── game_over_screen.tscn/.gd  Score + best-score right of badge, new-record badge (bicho_0003)
+│       ├── tutorial_overlay.tscn/.gd  How to Play first-run overlay (dismissed by tap)
 │       └── settings_overlay.tscn/.gd  Joypad vs. tilt selection (persisted via SaveManager)
 │
 ├── scripts/
@@ -83,6 +99,7 @@ turbo-race-godot/
 │   │   ├── vehicle_physics.gd      Jump arc, collision rects, guards, Y/X clamps
 │   │   ├── obstacle_physics.gd     World-rect transform, all three collision checks
 │   │   └── world_speed.gd          Speed advance curve, initial speed/distance constants
+│   ├── debug_collision_overlay.gd  Debug: draws collision rects on top of sprites (z_index=1000)
 │   └── data/
 │       ├── score_model.gd          GameScore data class (class_name GameScore)
 │       ├── level_data.gd           LevelData struct + JSON loader + schema validation
@@ -119,7 +136,7 @@ All assets are direct ports from the original Cocos2d-x `Resources/` folder.
 
 | File | Used for |
 |------|----------|
-| `bicho_0001..0004.png` | Player character (frog) walk + jump animation frames |
+| `bicho_0001..0004.png` | Player character walk + jump animation frames |
 | `shadow.png` | Player ground shadow |
 | `cielo.png` | Sky background (parallax layer 0, slowest) |
 | `background_1.png` | Mid background (parallax layer 1) |
@@ -148,36 +165,29 @@ All assets are direct ports from the original Cocos2d-x `Resources/` folder.
 | `sound_off.png / sound_off_off.png` | Sound toggle — off state |
 | `joystick.png` | Joystick background ring |
 | `joy_L.png` | Joystick thumb (draggable indicator) |
-| `control_joystick.png` | Joystick mode icon in settings |
-| `control_tilt.png` | Tilt mode icon in settings |
-| `controls_options.png` | Settings overlay background |
-| `tap.png` | Tap-to-jump hint icon |
-| `tilt_icon.png` | Tilt sensor icon |
-| `chart.png / chart_off.png` | Leaderboard button |
-| `btn_chart_2.png / btn_chart_2_off.png` | Leaderboard button variant |
-| `achievement.png / achievement_off.png` | Achievements button |
-| `ajustes.png / ajustes_off.png` | Settings button |
-| `tablero_title.png` | Leaderboard panel title |
-| `fb-icon.png` | Facebook icon (legacy, not wired) |
+| `ic_launcher_192.png` | App launcher icon (192×192) |
+| `ic_launcher_foreground_432.png` | Adaptive icon foreground (432×432) |
+| `ic_launcher_background_432.png` | Adaptive icon background (432×432, solid #2D2D2D) |
+| `game_icon.png` | Splash / store icon |
 
 ### Audio (`resources/audio/`)
 
 | File | Used for |
 |------|----------|
-| `vg_bt_music.mp3` | Background music track 1 |
-| `diego_music.mp3` | Background music track 2 |
-| `POL-turtle-blues-short.mp3` | Background music track 3 |
-| `jump.mp3` | Jump SFX (plays on `do_jump()`) |
-| `smash.mp3` | Collision/death SFX (plays on `die()`) |
+| `vg_bt_music.mp3` | Background music — "BT Turbo Tunnel - VGMusic.com" |
+| `diego_music.mp3` | Background music — "Music by Diego Rodriguez" |
+| `POL-turtle-blues-short.mp3` | Background music — "Turtle Blues - PlayOnLoop.com" |
+| `jump.mp3` | Jump SFX |
+| `smash.mp3` | Collision/death SFX |
 | `swoosh.mp3` | UI transition swoosh |
-| `lightning.mp3` | Speed-up or obstacle hit SFX |
+| `lightning.mp3` | Speed-up SFX |
 | `button.mp3` | UI button press SFX |
 
 ### Fonts (`resources/fonts/`)
 
 | File | Used for |
 |------|----------|
-| `Carton_Six.ttf` | Primary display font (score, menus) |
+| `Carton_Six.ttf` | Primary display font (score, menus, HUD) |
 | `CartonSixBMP.fnt` | Bitmap version for pixel-perfect rendering |
 
 ### Levels (`resources/levels/`)
@@ -208,17 +218,23 @@ This section maps key C++ classes to their Godot equivalents. Full symbol-level 
 | `getGroundCollision()` | `ground_collision_rect(pos_x, player_y, w, h)` |
 | `getAirCollision()` | `air_collision_rect(pos_x, pos_y, w, h)` |
 
-> **Note on arc formula:** Cocos2d-x `JumpBy` uses `height * |sin(π * t)|`. An earlier port used `4t(1-t)` (parabola), which produces a visually similar but physically different arc — the sine peaks earlier and the collision window for air obstacles differs at t≈0.149 (sine) vs t≈0.129 (parabola). The sine formula is correct.
+> **Note on arc formula:** Cocos2d-x `JumpBy` uses `height * |sin(π * t)|`. A parabola `4t(1-t)` looks similar but is wrong — collision windows differ at t≈0.149 (sine) vs t≈0.129 (parabola). Always use sine.
 
 ### Collision system
 
 | C++ | Godot |
 |-----|-------|
 | `BaseObstacle::collision(vehicle)` | `ObstaclePhysics.check_collision(obs, vehicle)` |
-| `SingleObstacle` lane-band guard | `ObstaclePhysics.check_single_collision()` — y-band test first |
-| `AirDoubleObstacle` jump-height guard | `ObstaclePhysics.check_air_collision()` — airborne_height ≥ 63.0 |
-| `DoubleObstacle` two-rect union | `ObstaclePhysics.check_double_collision()` |
+| `SingleObstacle` lane-band guard | `ObstaclePhysics.single_collision()` — y-band test first |
+| `AirDoubleObstacle` jump-height guard | `ObstaclePhysics.air_collision()` — airborne_height ≥ 63.0 |
+| `DoubleObstacle` two-rect union | `ObstaclePhysics.base_collision()` |
 | `ObstaclePool<T>` template | `ObstaclePool` GDScript class (one instance per type) |
+
+**Collision rect tuning vs. C++ source:**
+The vehicle ground/air rects are derived from `BaseVehicle::getGroundCollision()` and `getAirCollision()` then adjusted for Godot feel:
+- Width reduced 20% horizontally (centered) vs raw C++ values
+- Front (right) edge trimmed a further 10% to leave clearance before the character nose
+- Use the `debug_collision` export var on `GameScene` to visualise rects at runtime
 
 ### World speed
 
@@ -227,7 +243,6 @@ This section maps key C++ classes to their Godot equivalents. Full symbol-level 
 | `START_WORLD_SPEED = designWidth * 0.5` | `START_WORLD_SPEED: float = 512.0` |
 | `MIN_DISTANCE_OBSTACLES = designWidth / 1.8` | `MIN_DISTANCE_OBSTACLES: float = 568.89` |
 | `START_X_OBSTACLES = designWidth * 1.9` | `START_X_OBSTACLES: float = 1945.6` |
-| Speed advance per frame | `advance_speed(current, delta, level_data)` |
 
 ### Scoring
 
@@ -242,29 +257,59 @@ This section maps key C++ classes to their Godot equivalents. Full symbol-level 
 
 | C++ (`HudLayer.cpp` + `SneakyJoystick`) | Godot (`game_scene.gd` + `hud.gd`) |
 |------------------------------------------|-------------------------------------|
-| Left-half drag → `doMove(Vec2)` (X + Y) | `InputEventScreenDrag` / `InputEventMouseMotion` → `do_move(vel)` |
-| Right-half tap → `doJump()` | `InputEventScreenTouch` right-half / `InputEventMouseButton` right-half |
+| Left-half drag → `doMove(Vec2)` (X + Y) | `InputEventScreenDrag` → `do_move(vel)` |
+| Right-half tap → `doJump()` | `InputEventScreenTouch` right-half |
 | `SneakyJoystickSkinnedBase` thumb visual | `hud.gd _input()` → `_joy_thumb.position` |
-| Accelerometer tilt → `doMove` | `SaveManager.is_using_joypad()` toggles input path (tilt stub, not yet wired) |
 
 ### Z-depth ordering
 
 | C++ (`GameDeep` enum) | Godot `z_index` |
 |----------------------|-----------------|
-| Air obstacle: `z = 0` (front) | `z_index = int(WIN_H / 10.0)` = **76** |
-| Player: `z = WIN_H * 0.5` | `z_index = int((WIN_H - z_param) / 10.0)` ≈ **46** (dynamic) |
-| Single obstacle: `z = lane_y` | `z_index = int((WIN_H - y) / 10.0)` ≈ **39–46** |
-| Ground obstacle: `z = WIN_H * 0.5` | `z_index = int((WIN_H - WIN_H*0.5) / 10.0)` = **38** |
+| Air obstacle (always front) | `int(WIN_H / 10.0)` = **76** |
+| Player (dynamic per lane) | `int((WIN_H - z_param) / 10.0)` ≈ **46** |
+| Single obstacle (by lane) | `int((WIN_H - y) / 10.0)` ≈ **39–46** |
+| Ground obstacle (behind player) | `int((WIN_H - WIN_H*0.5) / 10.0)` = **38** |
 
-> Formula: `z_index = int((WIN_H - z_param) / 10)` where WIN_H = 768. Higher z_param → lower z_index → rendered behind.
+### UI layout — Cocos2d-x center-anchor → Godot Label rects
 
-### Parallax
+Cocos2d-x Labels default to center anchor `(0.5, 0.5)`. To convert a C++ label position to a Godot `offset_*` rect:
 
-| C++ (`GameLayer` parallax scroll) | Godot (`game_scene.gd`) |
-|----------------------------------|-------------------------|
-| 5 layers (`MAX_PARALLAX = 5`) | 5 `Sprite2D` nodes scrolled each frame |
-| Speed multiplier per layer | `PARALLAX_SPEEDS: Array[float]` |
-| Wrap at `designWidth` | `if sprite.position.x < -WIN_W: sprite.position.x += WIN_W * 2` |
+```
+godot_center_y = BG_height - cocos_y_up
+godot_center_x = cocos_x  (X axis unchanged)
+
+offset_top    = godot_center_y - label_h / 2
+offset_bottom = godot_center_y + label_h / 2
+horizontal_alignment = CENTER (1)
+```
+
+**Example — game over score labels** (`PopUpLoseLayer.cpp`):
+```
+BG=520×480, badge=175×128, BG center = Vec2(260, 240)
+scoreLabel:  cocos x=347.5, y=227.2  →  Godot center (347.5, 253)  →  top=232 bottom=274
+maxScore:    cocos x=347.5, y=191.4  →  Godot center (347.5, 289)  →  top=268 bottom=310
+```
+
+**Dynamic-width label formula** (`GameLayer::_showAudioPlaying`):
+```cpp
+// C++: left anchor, position = visibleWidth - textWidth * 1.1
+lblMusic->setAnchorPoint(Vec2(0, 0.5));
+lblMusic->setPositionX(visibleWidth - musicSize.width * 1.1);
+```
+```gdscript
+# Godot equivalent — measure after one frame
+add_child(lbl)
+await get_tree().process_frame
+lbl.position.x = maxf(WIN_W - lbl.get_minimum_size().x * 1.1, 0.0)
+```
+
+### Y-axis coordinate system
+
+Cocos2d-x is Y-up (origin bottom-left). Godot 2D is Y-down (origin top-left).
+
+Pattern used: set GameScene root `scale = Vector2(1, -1)`, `position = Vector2(0, WIN_H)`. This flips the entire scene so C++ world-space values work unchanged. Every `Sprite2D` child needs a counter-flip `scale.y = -1`. CanvasLayer nodes (UI) are exempt — they bypass the parent transform.
+
+> **Debug overlay:** To visualise collision rects, set `debug_collision = true` on the `GameScene` node. A child `Node2D` with `z_index = 1000` draws green (ground rect), cyan (air rect), and red (obstacle rects) outlines on top of all sprites. **Important:** never implement debug drawing in the parent `_draw()` — it renders behind all children.
 
 ---
 
@@ -284,10 +329,47 @@ This section maps key C++ classes to their Godot equivalents. Full symbol-level 
 
 ## Android export
 
-See `docs/LEADERBOARD_SETUP.md` for:
-- Installing the `godot-play-game-services` plugin
-- Google Play Console setup
-- Leaderboard and achievement IDs (these are public resource identifiers, same as in original `Constants.h`)
+### Build signed APK (debug / sideload)
+
+```sh
+/Applications/Godot.app/Contents/MacOS/Godot --headless \
+  --export-debug "Android Debug" /tmp/turborace_debug.apk
+
+adb install -r /tmp/turborace_debug.apk
+adb shell am start -n com.carlos.pinan.turborace.godot/com.godot.game.GodotAppLauncher
+```
+
+### Build signed AAB (Play Store release)
+
+```sh
+/Applications/Godot.app/Contents/MacOS/Godot --headless \
+  --export-release "Android Release" builds/turborace_vN_release.aab
+```
+
+### Generate native debug symbols for Play Console
+
+```sh
+cd android/build/build/intermediates/merged_native_libs/standardRelease/\
+mergeStandardReleaseNativeLibs/out
+zip -r /path/to/builds/turborace_vN_symbols.zip lib/
+```
+
+Upload the symbols zip under **Native debug symbols** in the Play Console release editor.
+
+### Verify version code baked into AAB
+
+```sh
+grep versionCode android/build/build/intermediates/merged_manifests/\
+standardRelease/processStandardReleaseManifest/AndroidManifest.xml
+```
+
+### Notes
+
+- `export_presets.cfg` is **gitignored** — contains release keystore credentials. Never commit.
+- `android/build/src/main/AndroidManifest.xml` is **not git-tracked** (generated by Godot build system). The `android:windowLayoutInDisplayCutoutMode="shortEdges"` and `EdgeToEdge.enable()` call in `GodotApp.java` must be re-applied after reinstalling the android build template.
+- Bump `version/code` in **both** presets in `export_presets.cfg` before each Play Store release.
+- Play Console warning *"No deobfuscation file"*: safe to ignore for Godot — Java layer is boilerplate; native code is covered by the symbols zip.
+- Play Console warning *"Remove orientation restrictions"*: safe to ignore — landscape-only is correct for this game type.
 
 ---
 
@@ -302,16 +384,20 @@ This repo ships a [Claude Code](https://claude.ai/code) skill that captures ever
 3. Type `/cocos2dx-to-godot` in any prompt
 
 The skill covers:
-- Y-axis flip pattern (Cocos2d-x Y-up → Godot Y-down)
-- `JumpBy` sine arc formula — and why parabola is wrong
-- Pure physics function architecture for unit-testable collision logic
-- Z-depth ordering formula derived from `GameDeep` enum
-- Collision rect fractions (read from C++ `contentSize`, never guessed)
+
+- Y-axis flip pattern (Cocos2d-x Y-up → Godot Y-down) and sprite counter-flip
+- `JumpBy` sine arc formula — and why a parabola produces wrong collision windows
+- Pure physics function architecture (no Node deps = unit-testable)
+- Z-depth ordering formula from `GameDeep` enum
+- Collision rect fractions (always read from C++ `contentSize` — never guessed)
 - All three obstacle collision guards (`SingleObstacle`, `DoubleObstacle`, `AirDoubleObstacle`)
 - Unified touch + mouse joystick input pattern
+- Cocos2d-x center-anchor UI → Godot Label rect conversion
+- Dynamic Label positioning: `await process_frame` + `get_minimum_size()` formula
+- Debug collision overlay: child Node2D z_index=1000, not parent `_draw()`
+- Android Play Store release: AAB build, symbols zip, version code verification
 - Parallax scroll, obstacle pooling, scoring, world speed constants
 - Parity verification checklist
-- GUT headless test commands
 
 ---
 
@@ -326,6 +412,7 @@ The skill covers:
 | `Classes/models/SingleObstacle.cpp` | Lane-band collision guard |
 | `Classes/models/DoubleObstacle.cpp` | Ground obstacle two-rect collision |
 | `Classes/models/AirDoubleObstacle.cpp` | Air obstacle jump-height threshold (63 units) |
-| `Classes/ui/game/GameLayer.cpp` | Spawning table, world speed, scoring event |
+| `Classes/ui/game/GameLayer.cpp` | Spawning table, world speed, scoring, song label |
 | `Classes/ui/game/HudLayer.cpp` | Joystick + tap input, `doMove(Vec2)` call |
+| `Classes/ui/gameover/PopUpLoseLayer.cpp` | Game over screen layout (score label positions) |
 | `Resources/levels/*.json` | Level parameters (copied verbatim) |

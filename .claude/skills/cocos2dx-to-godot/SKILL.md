@@ -305,7 +305,142 @@ Before calling a system "ported", verify:
 
 ---
 
-## 13. GUT test commands
+## 13. UI layout — converting Cocos2d-x positions to Godot
+
+Cocos2d-x uses center-anchor for Labels by default. To port a label position to Godot:
+
+1. Compute the **Godot Y** of the label center: `godot_y = BG_height - cocos_y`
+2. Compute the **Godot X** of the label center: same as cocos_x (X axis unchanged)
+3. In Godot, create a Label with a rect that centers on that point:
+   - `offset_top = godot_y - label_h/2`
+   - `offset_bottom = godot_y + label_h/2`
+   - Use `horizontal_alignment = CENTER` (= 1) to match Cocos2d-x center anchor
+
+**Example — PopUpLoseLayer score labels (game over screen):**
+```
+BG = 520×480, badge = 175×128, o = Vec2(260, 240) (BG center, Y-up)
+scoreLabel cocos pos: x = o.x + badge_w/2 = 347.5,  y = o.y - badge_h*0.1 = 227.2
+  → Godot center: x=347.5, y=480-227.2=253
+maxScoreLabel: y_cocos = 227.2 - badge_h*0.28 = 191.4  → Godot y=289
+
+Godot Label rects:
+  ScoreLabel: offset_left=200, offset_top=232, offset_right=500, offset_bottom=274
+  BestLabel:  offset_left=200, offset_top=268, offset_right=500, offset_bottom=310
+  both: horizontal_alignment=1 (CENTER)
+```
+
+---
+
+## 14. Dynamic Label positioning — C++ anchor formula
+
+`GameLayer::_showAudioPlaying()` uses left anchor + formula:
+```cpp
+lblMusic->setAnchorPoint(Vec2(0, 0.5));
+lblMusic->setPositionX(visibleWidth - musicSize.width * 1.1);
+```
+
+Godot equivalent — measure text width after one frame, then apply:
+```gdscript
+func show_song_label(track_name: String) -> void:
+    var lbl := Label.new()
+    lbl.text = "Playing " + track_name
+    lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    lbl.size = Vector2(WIN_W, 50.0)   # max width so layout can measure
+    lbl.position = Vector2(0.0, START_Y_OFFSCREEN)
+    add_child(lbl)
+    await get_tree().process_frame    # wait for Godot to compute natural size
+    if not is_instance_valid(lbl): return
+    var text_w: float = lbl.get_minimum_size().x
+    lbl.position.x = maxf(WIN_W - text_w * 1.1, 0.0)
+    # now start tween animation
+```
+
+Key: `lbl.size` is zero until after `add_child`. `get_minimum_size()` needs one frame.
+
+---
+
+## 15. Debug collision overlay in Y-flipped scenes
+
+`_draw()` on the root Node2D draws **behind** all child sprites. With Y-flip scenes (`scale=(1,-1)`), this makes debug outlines invisible.
+
+Fix: create a child Node2D with `z_index = 1000`:
+
+```gdscript
+# scripts/debug_collision_overlay.gd
+extends Node2D
+var game_scene: GameScene = null
+
+func _draw() -> void:
+    if not game_scene: return
+    var p := game_scene._player
+    if p:
+        draw_rect(p.get_ground_collision(), Color(0,1,0,1), false, 3.0)
+        draw_rect(p.get_air_collision(),    Color(0,1,1,1), false, 3.0)
+    for obs in game_scene._obstacles:
+        for r in obs.get_world_rects():
+            draw_rect(r, Color(1,0.2,0,1), false, 3.0)
+```
+
+Wire it in `_ready()`:
+```gdscript
+@export var debug_collision: bool = false
+var _debug_overlay: Node2D = null
+
+func _ready() -> void:
+    # ... existing setup ...
+    if debug_collision:
+        _debug_overlay = Node2D.new()
+        _debug_overlay.set_script(load("res://scripts/debug_collision_overlay.gd"))
+        _debug_overlay.z_index = 1000
+        add_child(_debug_overlay)
+        _debug_overlay.set("game_scene", self)
+
+func _physics_process(delta: float) -> void:
+    # ... existing logic ...
+    if debug_collision and _debug_overlay:
+        _debug_overlay.queue_redraw()
+```
+
+Child inherits parent's Y-flip transform, so world-space Rect2 values draw correctly.
+
+---
+
+## 16. Android Play Store release workflow
+
+**Build signed AAB:**
+```sh
+/Applications/Godot.app/Contents/MacOS/Godot --headless \
+  --export-release "Android Release" builds/turborace_vN_release.aab
+```
+
+**Generate native symbols zip** (for Play Console crash symbolication):
+```sh
+cd android/build/build/intermediates/merged_native_libs/standardRelease/\
+mergeStandardReleaseNativeLibs/out
+zip -r /path/to/builds/turborace_vN_symbols.zip lib/
+```
+
+**Version code in built AAB** comes from `export_presets.cfg` → Gradle property `export_version_code`. Verify with:
+```sh
+grep versionCode android/build/build/intermediates/merged_manifests/\
+standardRelease/processStandardReleaseManifest/AndroidManifest.xml
+```
+
+**Play Console upload flow:**
+1. Create new release
+2. Upload `*_release.aab`
+3. Upload `*_symbols.zip` under "Native debug symbols"
+4. Release name auto-fills as `{version_name} ({version_code})` e.g. `1.0.0 (4)`
+
+**Safe-to-ignore Play Console warnings for Godot games:**
+- *"No deobfuscation file"* — Godot Java layer is boilerplate only; real code is in `.so` (already covered by symbols.zip). R8/ProGuard not worth enabling.
+- *"Remove orientation restrictions"* — landscape-only is correct for this game type; portrait would require full UI/gameplay redesign.
+
+**Never commit `export_presets.cfg`** — contains release keystore password. Already gitignored.
+
+---
+
+## 17. GUT test commands
 
 ```sh
 # Run all tests headless
