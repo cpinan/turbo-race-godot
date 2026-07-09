@@ -13,3 +13,4 @@ export/
 
 # Android build output
 bin/
+export_presets.cfg
