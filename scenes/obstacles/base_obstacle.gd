@@ -54,3 +54,9 @@ func collision(vehicle: BaseVehicle) -> bool:
 func has_passed(player_pos_x: float) -> bool:
 	return ObstaclePhysics.has_passed_player(
 		position.x, content_size.x, player_pos_x)
+
+func get_world_rects() -> Array:
+	var out: Array = []
+	for r: Rect2 in _local_rects:
+		out.append(ObstaclePhysics.world_rect(r, position, content_size))
+	return out

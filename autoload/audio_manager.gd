@@ -7,6 +7,11 @@ const MUSIC_TRACKS: Array = [
 	"res://resources/audio/diego_music.mp3",
 	"res://resources/audio/POL-turtle-blues-short.mp3",
 ]
+const MUSIC_TRACK_NAMES: Array = [
+	"BT Turbo Tunnel - VGMusic.com",
+	"Music by Diego Rodriguez",
+	"Turtle Blues - PlayOnLoop.com",
+]
 const MUSIC_VOLUME: float = 0.4
 const SFX_VOLUME:    float = 0.3
 const SFX_BUTTON:    String = "res://resources/audio/button.mp3"
@@ -30,17 +35,19 @@ func _ready() -> void:
 
 	_music_player.finished.connect(_on_music_finished)
 
-func play_music() -> void:
+func play_music() -> String:
 	if SaveManager.is_mute():
-		return
+		return ""
 	var path: String = MUSIC_TRACKS[_music_index]
+	var name: String = MUSIC_TRACK_NAMES[_music_index]
 	_music_index = (_music_index + 1) % MUSIC_TRACKS.size()
 	var stream: AudioStreamMP3 = load(path)
 	if stream:
-		stream.loop = true  # mirrors AudioEngine::setLoop(musicId, true)
+		stream.loop = true
 		_music_player.stream = stream
 		_music_player.volume_db = linear_to_db(MUSIC_VOLUME)
 		_music_player.play()
+	return name
 
 func stop_music() -> void:
 	_music_player.stop()

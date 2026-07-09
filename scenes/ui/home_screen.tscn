@@ -40,6 +40,7 @@ offset_left = 28.0
 offset_top = 204.0
 offset_right = 289.0
 offset_bottom = 317.0
+pivot_offset = Vector2(130.5, 56.5)
 texture_normal = ExtResource("4")
 texture_pressed = ExtResource("5")
 
@@ -48,6 +49,7 @@ offset_left = 28.0
 offset_top = 361.0
 offset_right = 289.0
 offset_bottom = 474.0
+pivot_offset = Vector2(130.5, 56.5)
 texture_normal = ExtResource("6")
 texture_pressed = ExtResource("7")
 
@@ -56,6 +58,7 @@ offset_left = 28.0
 offset_top = 517.0
 offset_right = 289.0
 offset_bottom = 630.0
+pivot_offset = Vector2(130.5, 56.5)
 texture_normal = ExtResource("8")
 texture_pressed = ExtResource("9")
 
@@ -66,14 +69,15 @@ offset_right = 138.0
 offset_bottom = 747.0
 
 [node name="BtnHowToPlay" type="Button" parent="Menu"]
-offset_left = 780.0
-offset_top = 640.0
-offset_right = 1010.0
-offset_bottom = 700.0
+offset_left = 690.0
+offset_top = 638.0
+offset_right = 990.0
+offset_bottom = 718.0
+pivot_offset = Vector2(150.0, 40.0)
 theme_override_fonts/font = ExtResource("10")
-theme_override_font_sizes/font_size = 38
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.9, 0.9, 0.9, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 44
+theme_override_colors/font_color = Color(1, 1, 0.2, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.9, 0.0, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.4, 1)
 flat = true
 text = "How to Play"

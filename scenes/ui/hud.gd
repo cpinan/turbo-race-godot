@@ -35,7 +35,7 @@ func _on_score_changed(_total: int) -> void:
 func show_hud() -> void:
 	visible = true
 	if _joy_bg:
-		_joy_bg.visible = SaveManager.is_using_joypad()
+		_joy_bg.visible = true
 	_reset_thumb()
 
 func hide_hud() -> void:
@@ -97,3 +97,25 @@ func _move_thumb(dx: float, dy: float) -> void:
 func _reset_thumb() -> void:
 	if _joy_thumb:
 		_joy_thumb.position = THUMB_REST
+
+func show_song_label(track_name: String) -> void:
+	var lbl := Label.new()
+	lbl.text = "Playing " + track_name
+	lbl.add_theme_font_override("font", load("res://resources/fonts/Carton_Six.ttf"))
+	lbl.add_theme_font_size_override("font_size", 35)
+	lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	lbl.position             = Vector2(0.0, 960.0)
+	lbl.size                 = Vector2(WIN_W, 50.0)
+	add_child(lbl)
+	# Mirror C++ setPositionX(visibleWidth - textWidth * 1.1) with left anchor.
+	await get_tree().process_frame
+	if not is_instance_valid(lbl):
+		return
+	var text_w: float = lbl.get_minimum_size().x
+	lbl.position.x = maxf(WIN_W - text_w * 1.1, 0.0)
+	var tw := lbl.create_tween()
+	tw.tween_property(lbl, "position:y", 718.0, 1.0)
+	tw.tween_interval(2.1)
+	tw.tween_property(lbl, "modulate:a", 0.0, 0.9)
+	tw.tween_callback(func(): lbl.queue_free())

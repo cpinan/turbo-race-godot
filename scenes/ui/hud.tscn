@@ -12,9 +12,9 @@ layer = 1
 script = ExtResource("1")
 
 [node name="ScoreLabel" type="Label" parent="."]
-offset_left = 700.0
+offset_left = 620.0
 offset_top = 10.0
-offset_right = 1014.0
+offset_right = 940.0
 offset_bottom = 70.0
 theme_override_fonts/font = ExtResource("6")
 theme_override_font_sizes/font_size = 45

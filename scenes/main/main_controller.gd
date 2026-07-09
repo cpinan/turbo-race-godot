@@ -47,14 +47,18 @@ func _on_level_selected(level_name: String) -> void:
 	_current_level = level_name
 	_game_scene.restart(level_name)
 	_hud.show_hud()
-	AudioManager.play_music()
+	var track: String = AudioManager.play_music()
+	if not track.is_empty():
+		_hud.show_song_label(track)
 
 func _on_how_to_play() -> void:
 	_show_tutorial = true
 	_current_level = "easy"
 	_game_scene.restart("easy")
 	_hud.show_hud()
-	AudioManager.play_music()
+	var track: String = AudioManager.play_music()
+	if not track.is_empty():
+		_hud.show_song_label(track)
 
 func _on_entrance_done() -> void:
 	if _show_tutorial:
@@ -79,7 +83,9 @@ func _restart() -> void:
 	_pause_screen.hide_pause()
 	_game_over.hide()
 	_game_scene.restart(_current_level)
-	AudioManager.play_music()
+	var track: String = AudioManager.play_music()
+	if not track.is_empty():
+		_hud.show_song_label(track)
 
 func _go_home() -> void:
 	_pause_screen.hide_pause()

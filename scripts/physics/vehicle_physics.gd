@@ -22,26 +22,28 @@ static func airborne_height(pos_y: float, player_y: float, content_h: float) -> 
 
 # Ground collision rect (world space, Y-up).
 # Source: BaseVehicle::getGroundCollision
+# Adjusted vs C++ original: 20% narrower centered, then front (right) trimmed 10%.
 static func ground_collision_rect(
 		pos_x: float, player_y: float, content_w: float, content_h: float) -> Rect2:
 	var bbox_min_x: float = pos_x - content_w * 0.5
 	return Rect2(
-		bbox_min_x + content_w * 0.3,
+		bbox_min_x + content_w * 0.355,
 		player_y,
-		content_w * 0.55,
+		content_w * 0.34,
 		content_h * 0.3
 	)
 
 # Air collision rect (world space, Y-up).
 # Source: BaseVehicle::getAirCollision — note: height uses WIDTH, not height.
+# Adjusted vs C++ original: 20% narrower centered, then front (right) trimmed 10%.
 static func air_collision_rect(
 		pos_x: float, pos_y: float, content_w: float, content_h: float) -> Rect2:
 	var bbox_min_x: float = pos_x - content_w * 0.5
 	var bbox_min_y: float = pos_y - content_h * 0.5
 	return Rect2(
-		bbox_min_x + content_w * 0.3,
+		bbox_min_x + content_w * 0.355,
 		bbox_min_y + content_h * 0.16,
-		content_w * 0.55,
+		content_w * 0.34,
 		content_w * 0.2   # intentionally uses width
 	)
 

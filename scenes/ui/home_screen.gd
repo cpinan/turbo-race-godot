@@ -41,21 +41,15 @@ func _ready() -> void:
 
 func _start_button_animations() -> void:
 	# Mirrors C++ RepeatForever ScaleTo sequence — scale=1.05, time_dt=1.3s
-	# Each button pulses in sequence with 1.3s offset
+	# pivot_offset is set in .tscn so size is always correct
 	_pulse_button(_btn_easy,   0.0)
 	_pulse_button(_btn_normal, 1.3)
 	_pulse_button(_btn_hard,   2.6)
 
-	# Set pivot to center for each button
-	for btn in [_btn_easy, _btn_normal, _btn_hard]:
-		var b := btn as TextureButton
-		b.pivot_offset = b.size * 0.5
-
-	# "How to Play" wobbles like in C++ — RotateTo(-2°) ↔ RotateTo(2°)
+	# "How to Play" wobbles — pivot set in .tscn
 	var htw := create_tween().set_loops()
 	htw.tween_property(_btn_how_to_play, "rotation_degrees", -2.0, 0.5)
 	htw.tween_property(_btn_how_to_play, "rotation_degrees",  2.0, 0.5)
-	_btn_how_to_play.pivot_offset = _btn_how_to_play.size * 0.5
 
 func _pulse_button(btn: TextureButton, delay: float) -> void:
 	var tw := create_tween().set_loops()
@@ -63,7 +57,9 @@ func _pulse_button(btn: TextureButton, delay: float) -> void:
 		tw.tween_interval(delay)
 	tw.tween_property(btn, "scale", Vector2(1.05, 1.05), 0.65)
 	tw.tween_property(btn, "scale", Vector2(1.0,  1.0),  0.65)
-	tw.tween_interval(3.9 - delay - 1.3)
+	var idle: float = 3.9 - delay - 1.3
+	if idle > 0.01:
+		tw.tween_interval(idle)
 
 func _on_level(level_name: String) -> void:
 	if _disabled:

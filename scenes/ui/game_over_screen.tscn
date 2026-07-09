@@ -27,32 +27,34 @@ offset_right = 772.0
 offset_bottom = 624.0
 texture = ExtResource("2")
 
+[node name="ScoreLabel" type="Label" parent="BG"]
+offset_left = 200.0
+offset_top = 232.0
+offset_right = 500.0
+offset_bottom = 274.0
+theme_override_fonts/font = ExtResource("8")
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = ""
+horizontal_alignment = 1
+
+[node name="BestLabel" type="Label" parent="BG"]
+offset_left = 200.0
+offset_top = 268.0
+offset_right = 500.0
+offset_bottom = 310.0
+theme_override_fonts/font = ExtResource("8")
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(1, 1, 0.4, 1)
+text = ""
+horizontal_alignment = 1
+
 [node name="Badge" type="TextureRect" parent="BG"]
 offset_left = 172.0
 offset_top = 112.0
 offset_right = 347.0
 offset_bottom = 240.0
 texture = ExtResource("3")
-
-[node name="ScoreLabel" type="Label" parent="BG"]
-offset_left = 160.0
-offset_top = 238.0
-offset_right = 500.0
-offset_bottom = 278.0
-theme_override_fonts/font = ExtResource("8")
-theme_override_font_sizes/font_size = 32
-text = ""
-horizontal_alignment = 0
-
-[node name="BestLabel" type="Label" parent="BG"]
-offset_left = 160.0
-offset_top = 280.0
-offset_right = 500.0
-offset_bottom = 320.0
-theme_override_fonts/font = ExtResource("8")
-theme_override_font_sizes/font_size = 32
-text = ""
-horizontal_alignment = 0
 
 [node name="BtnHome" type="TextureButton" parent="BG"]
 offset_left = 140.0

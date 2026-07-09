@@ -34,6 +34,7 @@ const PHYSICS_FPS:   float  = 60.0   # reference frame rate for velocity scaling
 @export var single_scene: PackedScene
 @export var double_scene: PackedScene
 @export var air_scene:    PackedScene
+@export var debug_collision: bool = false
 
 var _player: BaseVehicle
 var _lane: LaneLayout
@@ -52,6 +53,8 @@ var _joy_anchor_x: float = 0.0
 var _joy_anchor_y: float = 0.0
 var _joy_norm_x: float   = 0.0
 var _joy_norm_y: float   = 0.0
+
+var _debug_overlay: Node2D = null
 
 var _floor_sprites:    Array = []
 var _sky_sprites:      Array = []
@@ -78,6 +81,13 @@ func _ready() -> void:
 	_create_player()
 	setup(_lane, "easy")
 	GameManager.set_state(GameManager.GameState.READY)
+	if debug_collision:
+		var overlay_script: Script = load("res://scripts/debug_collision_overlay.gd")
+		_debug_overlay = Node2D.new()
+		_debug_overlay.set_script(overlay_script)
+		_debug_overlay.z_index = 1000
+		add_child(_debug_overlay)
+		(_debug_overlay as Node2D).set("game_scene", self)
 
 func _create_background() -> void:
 	# Background layers in back-to-front draw order.
@@ -167,11 +177,10 @@ func restart(level_name: String) -> void:
 			BaseObstacle.ObstacleType.JUMP:   _double_pool.recycle(obs)
 			BaseObstacle.ObstacleType.NORMAL: _air_pool.recycle(obs)
 
-	# Start player off-screen left; tween to play position over 1.5s (mirrors C++ Starting state).
 	if _player:
 		var center_y: float   = _lane.player_start_y + _lane.wall_height * 0.5
 		_player.position.y    = center_y
-		_player.position.x    = -_player.content_size.x * 2.5
+		_player.position.x    = _player.content_size.x * 2.5
 		_player.player_y      = center_y - _player.content_size.y * 0.5
 		_player.reset_state()
 
@@ -181,7 +190,8 @@ func restart(level_name: String) -> void:
 	GameManager.configure(level_name, _lane)
 	GameManager.game_over.connect(_on_game_over)
 	_spawn_initial_obstacles()
-	GameManager.set_state(GameManager.GameState.STARTING)
+	GameManager.set_state(GameManager.GameState.PAUSED)
+	_on_entrance_done.call_deferred()
 
 # ---------------------------------------------------------------------------
 # Obstacle spawning — mirrors GameLayer::_spawnObstacleGroup
@@ -255,21 +265,6 @@ func _physics_process(delta: float) -> void:
 	if _paused:
 		return
 
-	# STARTING → kick off entrance tween, advance to PREPARING.
-	if GameManager.game_state == GameManager.GameState.STARTING:
-		GameManager.set_state(GameManager.GameState.PREPARING)
-		if _player:
-			var target_x: float = _player.content_size.x * 2.5
-			var tw := _player.create_tween()
-			tw.tween_property(_player, "position:x", target_x, 1.5)
-			tw.tween_callback(_on_entrance_done)
-		return
-
-	# PREPARING → wait for entrance tween (handled via callback).
-	if GameManager.game_state == GameManager.GameState.PREPARING:
-		_update_parallax(delta)
-		return
-
 	if GameManager.game_state != GameManager.GameState.READY:
 		return
 
@@ -288,6 +283,8 @@ func _physics_process(delta: float) -> void:
 	GameManager.advance_speed(delta)
 	_update_obstacles(delta)
 	_update_parallax(delta)
+	if debug_collision and _debug_overlay:
+		_debug_overlay.queue_redraw()
 
 func _update_obstacles(dt: float) -> void:
 	var speed_delta: float = GameManager.world_speed * dt * SPEED_OBSTACLE
