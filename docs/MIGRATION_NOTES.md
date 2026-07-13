@@ -79,4 +79,73 @@ No C++ symbols ported this phase. Folder structure, GUT, and CI established.
 - `kObstacleTable[0..9]` map-code → obstacle definition table → GDScript dictionary/array
 - `DT_DISTANCE = 0.8` (intra-group spacing multiplier) → constant
 - Scoring event: `obsX + obsContentWidth < playerPosX AND !passPlayerSFX` → pure predicate
-- `_checkAchievements()` → `GameManager._check_achievements()` Phase 5
+- `_checkAchievements()` → `AchievementChecker.check()` autoload (Phase 5)
+
+---
+
+## Phase 3 — Core loop & content
+
+### HomeLayer.cpp
+- Logo slide-in animation (`MoveTo`) → `Tween.tween_property(position:x, ...)` over 0.9 s
+- Level button pulse (`RepeatForever ScaleTo 1.05 / 1.0`) → looping Tween, staggered 1.3 s per button
+- "How to Play" wobble (`RotateTo ±2°`) → looping Tween on `rotation_degrees`
+- Sound toggle texture swap → `_update_sound_btn()` loads texture by mute state
+
+### GameLayer.cpp (scene/loop)
+- `_score.obstaclesJumped = 0` reset after persisting → `ScoreModel` reset on `game_scene.restart()`
+- Obstacle spawn loop → `game_scene.gd` spawns from pool; `GameManager` tracks free slots
+- `LocalStorageManager::setScore()` on game-over → `SaveManager.record_game_result(score, jumped)`
+- `LocalStorageManager::updateObstaclesJumped()` → folded into `record_game_result()`
+- parallax (`CCParallaxNode`) → two `TextureRect` layers scrolled with fractional speed in `_process`
+
+### LocalStorageManager.cpp
+- `getBoolForKey / setBoolForKey` (UserDefaults) → `ConfigFile.get_value / set_value` + `save()`
+- `getTotalGamesPlayed()` → `SaveManager.get_total_games_played()`
+- `getObstaclesJumped()` / `updateObstaclesJumped()` → `get_total_obstacles_jumped()` / `record_game_result()`
+- `getTotalScore()` → `get_total_score()`
+- `getAverageScore()` → `get_average_score()` (computed from total_score / total_games)
+- `getScoreInLevel()` / `setScoreInLevel()` → `get_best_score(level)` / `set_best_score(level, score)`
+- `isAchievementUnlocked()` / `unlockAchievement()` → `is_achievement_unlocked(id)` / `mark_achievement_unlocked(id)`
+
+### PopUpLoseLayer.cpp (GameOverScreen)
+- Score + best labels right-aligned right of badge → `Label` with `HORIZONTAL_ALIGNMENT_RIGHT`, positioned after one `await process_frame` to measure text width
+- `_showAudioPlaying()` label → `x = WIN_W - textWidth * 1.1` pattern
+
+### AudioManager (new — no direct C++ equivalent)
+- C++ played tracks ad-hoc from `SimpleAudioEngine`; Godot wraps into `AudioManager` autoload
+- `play_music()` → picks next track in rotation (3 tracks), returns track name for HUD label
+
+---
+
+## Phase 4 — Extensibility
+
+### LevelLoader.hpp (extended)
+- External level override: `user://levels/{name}.json` checked before `res://resources/levels/`
+- `"version"` field reserved in JSON schema for future backward-compat handling
+- New obstacle/vehicle: add scene + script — no base-class modification required
+
+---
+
+## Phase 5 — Leaderboard & achievements
+
+### Constants.h (IDs)
+- All `ACH_*` and `LEAD_*` string constants preserved verbatim in `LeaderboardService` as GDScript `const` strings
+
+### LocalStorageManager::unlockAchievement()
+- C++: sets local bool **and** submits to GPGS in one call (always online at game-over in Cocos flow)
+- Godot: split into `SaveManager.mark_achievement_unlocked(id)` (local) + `LeaderboardService.unlock_achievement(id)` (GPGS)
+- Guard: local mark only happens when `LeaderboardService.is_signed_in()` == true, preventing permanently-lost achievements if GPGS is unavailable
+
+### GameLayer::_checkAchievements()
+- Rule table (16 tabular + 4 special-case rules) → `AchievementChecker.check()` with same conditions
+- Accelerometer condition: `!_isJoypad` → `used_tilt: bool` parameter derived from `SaveManager.get_control_type() == "tilt"` on Android
+- `ACH_MORE_THAN_3000` threshold `>= 3001` preserved exactly (C++ stored threshold as `3001`)
+- `ACH_ACCELEROMETER_3000` uses `longScore >= 3000` (not 3001) — preserved
+
+### GodotPlayGameServices plugin (v3.2.0)
+- `GooglePlayGames::submitScore()` → `_plugin.submitScore(leaderboard_id, score)`
+- `GooglePlayGames::unlockAchievement()` → `_plugin.unlockAchievement(id)`
+- `GooglePlayGames::showAchievements()` → `_plugin.showAchievements()`
+- `GooglePlayGames::showLeaderboard()` → `_plugin.showLeaderboard(id)` / `showAllLeaderboards()`
+- Sign-in: `_plugin.signIn()` → `userAuthenticated(ok: bool)` signal
+- `Engine.get_singleton("GodotPlayGameServices")` used directly (not GDScript wrapper autoload) to avoid double-init guard in wrapper

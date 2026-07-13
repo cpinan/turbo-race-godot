@@ -51,5 +51,9 @@ func _try(id: String, condition: bool) -> void:
 		return
 	if SaveManager.is_achievement_unlocked(id):
 		return
+	# Only mark locally and submit when signed in — otherwise the local mark
+	# would permanently block future submission once the user does sign in.
+	if not LeaderboardService.is_signed_in():
+		return
 	SaveManager.mark_achievement_unlocked(id)
 	LeaderboardService.unlock_achievement(id)

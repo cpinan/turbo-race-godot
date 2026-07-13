@@ -70,24 +70,149 @@ subtracting half the sprite's size — matching Cocos2d-x center-anchor `(0.5, 0
 
 ---
 
-## Phase 3 — Core loop & data (planned)
+## Phase 3 — Core loop, content, pooling, level generator
 
-- `autoload/game_manager.gd` — game state machine, obstacle pool management
-- `autoload/score_model.gd` — holds a `GameScore`, emits `score_changed`
-- `autoload/level_loader.gd` — wraps `LevelData.load_level()`, exposes current level
-- `scenes/main/game_scene.gd` — spawning, parallax, per-frame update
+### Autoloads
+
+```
+GameManager      Game state machine (HOME → READY → PLAYING → GAME_OVER).
+                 Owns obstacle pool (MAX_OBSTACLES=10), emits game_over signal.
+ScoreModel       Holds a GameScore, emits score_changed signal.
+LevelLoader      Wraps LevelData.load_level(), exposes current level params.
+AudioManager     Music rotation (3 tracks), SFX, mute. play_music() → track name.
+SaveManager      ConfigFile persistence: best scores, mute, control type,
+                 cumulative stats (total_games, total_score, total_jumps),
+                 local achievement unlock state.
+```
+
+### Scenes
+
+```
+scenes/main/game_scene.gd     Spawning, parallax scrolling, per-frame obstacle updates.
+                               Emits entrance_done when opening animation completes.
+scenes/main/main_controller.gd Root scene — manages Home→Game→Pause→GameOver transitions.
+scenes/ui/home_screen.gd      Logo slide-in, level buttons (easy/normal/hard), sound toggle,
+                               Android-only: settings, achievements, leaderboard buttons.
+scenes/ui/hud.gd              Score label, pause button, virtual joystick, song-now-playing.
+scenes/ui/pause_screen.gd     Resume / restart / home.
+scenes/ui/game_over_screen.gd Score + best display, restart / home.
+scenes/ui/tutorial_overlay.gd First-run how-to-play overlay; dismissed signal unblocks READY.
+```
+
+### Obstacle pool
+
+`GameManager` holds a fixed pool of 10 `BaseObstacle` instances recycled by `game_scene.gd`.
+Spawn logic reads obstacle type codes from the level JSON `map` array, cycling when exhausted
+(matches `kObstacleTable` cycling in C++ `GameLayer`). Minimum separation enforced via
+`MIN_DISTANCE_OBSTACLES = 568.89` (= designWidth / 1.8, from `Constants.h`).
+
+### Level JSON
+
+Three built-in levels (`easy.json`, `normal.json`, `hard.json`) in `resources/levels/`.
+Each entry in `map[]` is a 1-digit obstacle-type code; the level wraps cyclically.
+Fields: `speedMultiplier`, `distanceMultiplier`, `speedAcceleration`, `maxWorldSpeed`, `map`.
+See `docs/LEVEL_FORMAT.md` for the full schema.
 
 ---
 
-## Phase 4 — Extensibility (planned)
+## Phase 4 — Extensibility
 
-Level JSON schema versioning + `user://` external loading.
-Extension pattern: new obstacle/vehicle = new scene file + new GDScript, no base class changes.
+Level files are loaded via `LevelLoader` which first checks `user://levels/` for overrides,
+falling back to `res://resources/levels/`. This allows custom level files to be sideloaded
+without recompiling the app (author-only — no in-app import UI).
+
+Schema version field (`"version": 1`) reserved in the JSON for future backward-compat handling.
+New obstacle or vehicle types: add one new scene file + one GDScript — no base class changes needed.
 
 ---
 
-## Phase 5 — Leaderboard (planned)
+## Phase 5 — Leaderboard & achievements (Android / Google Play Games Services)
 
-`godot-play-game-services` addon for Android.
-Score submission via `GameManager` → platform-agnostic `ILeaderboardService` interface.
-iOS/Game Center deferred.
+### Autoloads
+
+```
+LeaderboardService    Platform-agnostic GPGS interface.
+                      Uses Engine.get_singleton("GodotPlayGameServices") directly
+                      (bypasses GDScript wrapper autoload to avoid double-init).
+                      Manages sign-in state (_signed_in, _signing_in loop guard).
+                      Methods: submit_score(), show_achievements(), show_all_leaderboards(),
+                               show_leaderboard_for_level(), unlock_achievement().
+                      All calls are fire-and-forget; failures never block gameplay.
+
+AchievementChecker    Ports GameLayer::_checkAchievements() exactly.
+                      Called once per game-over after record_game_result().
+                      Reads cumulative stats from SaveManager, evaluates all 20 rules,
+                      submits newly-unlocked achievements to LeaderboardService.
+                      Guard: only marks achievement locally AND submits to GPGS when
+                      is_signed_in() == true (prevents lost achievements when offline).
+```
+
+### Sign-in flow
+
+1. `LeaderboardService._ready()` calls `_plugin.isAuthenticated()`.
+2. `userAuthenticated` signal fires with `ok: bool`.
+3. If `ok == false`, user tapping achievements/leaderboard triggers `_try_sign_in()`.
+4. `_signing_in` bool prevents re-entrant calls if `signIn()` returns `userAuthenticated(false)` immediately.
+
+### Achievement deduplication
+
+Local dedup: `SaveManager.is_achievement_unlocked(id)` checked first — skips re-submission
+for achievements already confirmed through GPGS. Achievement ID is only written locally
+(`SaveManager.mark_achievement_unlocked`) after a successful GPGS submission path (i.e. when
+`is_signed_in()` is true). Achievements earned while offline are retried on the next game-over
+once the user signs in.
+
+### Leaderboards
+
+Three boards (one per level), IDs from `Constants.h`. Score submitted every game-over;
+GPGS deduplicates if not a new personal best. `show_leaderboard_for_level()` opens the
+level-specific board; `show_all_leaderboards()` opens the GPGS global board picker.
+
+### Android-only UI
+
+`home_screen.gd` shows three extra buttons only when `OS.has_feature("android")`:
+- BtnAchievements (bottom-left) → `LeaderboardService.show_achievements()`
+- BtnLeaderboard (bottom-left) → `LeaderboardService.show_all_leaderboards()`
+- BtnSettings (bottom-right) → control-type panel (joystick vs tilt)
+
+---
+
+## Control input (Android)
+
+Two modes persisted via `SaveManager.get_control_type()`:
+
+**Joystick:** Virtual joystick overlay. Left-half drag → lane movement (X axis).
+Right-half tap → jump.
+
+**Tilt (accelerometer):** Calibration snapshot taken at game start.
+- `accel.y` → vertical (top/bottom tilt in landscape) → lane movement
+- `accel.x` → horizontal tilt → lane movement (2× multiplier)
+- Dead zone: 1.5 m/s². Full speed: 5.0 m/s².
+- Jump: right-half screen tap (same as joystick mode).
+
+---
+
+## Test strategy
+
+Framework: **GUT** (Godot Unit Test). 121 tests across 9 scripts.
+
+All pure-logic functions (`scripts/physics/`, `scripts/data/`) are tested directly — no scene
+required. Tests run headless in CI on every push.
+
+```
+test_vehicle_physics.gd      Jump arc, can_jump, collision rects, Y-limits, X-clamp
+test_obstacle_physics.gd     World-rect transform, single/air/double collision predicates
+test_world_speed.gd          Speed advance, cap, distance; lane layout proportions
+test_score_model.gd          Scoring formula, reset, GameScore struct
+test_level_data.gd           JSON load, field parsing, map cycling
+test_level_schema.gd         Schema validation, required fields, version field
+test_game_manager.gd         State machine transitions, pool management
+test_leaderboard_service.gd  Graceful degradation when GPGS unavailable, ID routing
+test_achievement_checker.gd  Rule conditions, sign-in guard, local dedup, cumulative stats
+```
+
+Run headless:
+```
+godot --headless --path . -s addons/gut/gut_cmdln.gd \
+  -gdir=res://tests/unit -gprefix=test_ -gsuffix=.gd -gexit
+```
