@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://ds7bph3kl2m5n"]
+[gd_scene load_steps=16 format=3 uid="uid://ds7bph3kl2m5n"]
 
 [ext_resource type="Script" path="res://scenes/ui/home_screen.gd" id="1"]
 [ext_resource type="Texture2D" path="res://resources/assets/tablero_title.png" id="2"]
@@ -10,6 +10,11 @@
 [ext_resource type="Texture2D" path="res://resources/assets/hard_off.png" id="8"]
 [ext_resource type="Texture2D" path="res://resources/assets/hard.png" id="9"]
 [ext_resource type="FontFile" path="res://resources/fonts/Carton_Six.ttf" id="10"]
+[ext_resource type="Texture2D" uid="uid://dyx00smvigdh6" path="res://resources/assets/controls_options.png" id="11"]
+[ext_resource type="Texture2D" uid="uid://chgfphd5ovy4l" path="res://resources/assets/control_joystick.png" id="12"]
+[ext_resource type="Texture2D" uid="uid://d3mw2ehli8iix" path="res://resources/assets/control_tilt.png" id="13"]
+[ext_resource type="Texture2D" uid="uid://cyjmfdrhj7324" path="res://resources/assets/ajustes.png" id="14"]
+[ext_resource type="Texture2D" uid="uid://dr7hulgxwxvvr" path="res://resources/assets/ajustes_off.png" id="15"]
 
 [node name="HomeScreen" type="CanvasLayer"]
 layer = 10
@@ -68,6 +73,15 @@ offset_top = 652.0
 offset_right = 138.0
 offset_bottom = 747.0
 
+[node name="BtnSettings" type="TextureButton" parent="Menu"]
+visible = false
+offset_left = 152.0
+offset_top = 649.0
+offset_right = 264.0
+offset_bottom = 758.0
+texture_normal = ExtResource("15")
+texture_pressed = ExtResource("14")
+
 [node name="BtnHowToPlay" type="Button" parent="Menu"]
 offset_left = 690.0
 offset_top = 638.0
@@ -81,3 +95,41 @@ theme_override_colors/font_pressed_color = Color(1, 0.9, 0.0, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.4, 1)
 flat = true
 text = "How to Play"
+
+[node name="ControlPanel" type="Control" parent="."]
+visible = false
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 1024.0
+offset_bottom = 768.0
+mouse_filter = 1
+
+[node name="DimBackground" type="ColorRect" parent="ControlPanel"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 1024.0
+offset_bottom = 768.0
+color = Color(0, 0, 0, 0.6)
+mouse_filter = 0
+
+[node name="PanelBG" type="TextureRect" parent="ControlPanel"]
+offset_left = 257.0
+offset_top = 144.0
+offset_right = 767.0
+offset_bottom = 624.0
+texture = ExtResource("11")
+mouse_filter = 2
+
+[node name="BtnJoystick" type="TextureButton" parent="ControlPanel"]
+offset_left = 310.0
+offset_top = 320.0
+offset_right = 492.0
+offset_bottom = 518.0
+texture_normal = ExtResource("12")
+
+[node name="BtnTilt" type="TextureButton" parent="ControlPanel"]
+offset_left = 532.0
+offset_top = 320.0
+offset_right = 714.0
+offset_bottom = 518.0
+texture_normal = ExtResource("13")

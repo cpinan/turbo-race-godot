@@ -35,7 +35,8 @@ func _on_score_changed(_total: int) -> void:
 func show_hud() -> void:
 	visible = true
 	if _joy_bg:
-		_joy_bg.visible = true
+		var tilt_mode: bool = OS.has_feature("android") and SaveManager.get_control_type() == "tilt"
+		_joy_bg.visible = not tilt_mode
 	_reset_thumb()
 
 func hide_hud() -> void:

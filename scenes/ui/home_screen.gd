@@ -3,6 +3,7 @@ extends CanvasLayer
 
 # Mirrors HomeLayer.cpp
 # Shows logo, level buttons (easy/normal/hard), sound toggle, how-to-play.
+# On Android: also shows settings gear → control-type panel (joystick vs tilt).
 
 signal level_selected(level_name: String)
 signal how_to_play_pressed
@@ -19,6 +20,11 @@ var _disabled: bool = false
 @onready var _btn_hard:        TextureButton = $Menu/BtnHard
 @onready var _btn_sound:       TextureButton = $Menu/BtnSound
 @onready var _btn_how_to_play: Button        = $Menu/BtnHowToPlay
+@onready var _btn_settings:    TextureButton = $Menu/BtnSettings
+@onready var _control_panel:   Control       = $ControlPanel
+@onready var _dim_bg:          ColorRect     = $ControlPanel/DimBackground
+@onready var _btn_joystick:    TextureButton = $ControlPanel/BtnJoystick
+@onready var _btn_tilt:        TextureButton = $ControlPanel/BtnTilt
 
 func _ready() -> void:
 	_menu.visible = false
@@ -38,6 +44,18 @@ func _ready() -> void:
 	_btn_hard.pressed.connect(func(): _on_level("hard"))
 	_btn_sound.pressed.connect(_on_sound)
 	_btn_how_to_play.pressed.connect(_on_how_to_play)
+
+	# Settings gear — Android only (add OS.has_feature("ios") when iOS is supported)
+	var is_mobile: bool = OS.has_feature("android")
+	_btn_settings.visible = is_mobile
+	if is_mobile:
+		_btn_settings.pressed.connect(_on_settings)
+		_btn_joystick.pressed.connect(func(): _set_control("joystick"))
+		_btn_tilt.pressed.connect(func(): _set_control("tilt"))
+		_dim_bg.gui_input.connect(_on_dim_bg_input)
+		_update_control_buttons()
+
+	_control_panel.visible = false
 
 func _start_button_animations() -> void:
 	# Mirrors C++ RepeatForever ScaleTo sequence — scale=1.05, time_dt=1.3s
@@ -88,6 +106,23 @@ func _on_how_to_play() -> void:
 	emit_signal("how_to_play_pressed")
 	queue_free()
 
+func _on_settings() -> void:
+	if _disabled:
+		return
+	AudioManager.play_sfx(AudioManager.SFX_BUTTON)
+	_control_panel.visible = true
+
+func _set_control(type: String) -> void:
+	SaveManager.set_control_type(type)
+	_update_control_buttons()
+	_control_panel.visible = false
+
+func _on_dim_bg_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		_control_panel.visible = false
+	elif event is InputEventScreenTouch and event.pressed:
+		_control_panel.visible = false
+
 func _update_sound_btn() -> void:
 	if _btn_sound == null:
 		return
@@ -97,12 +132,20 @@ func _update_sound_btn() -> void:
 	_btn_sound.texture_pressed = load(
 		"res://resources/assets/sound_off.png" if mute else "res://resources/assets/sound_on.png")
 
+func _update_control_buttons() -> void:
+	var current: String = SaveManager.get_control_type()
+	_btn_joystick.modulate = Color(1.0, 1.0, 1.0, 1.0) if current == "joystick" else Color(0.45, 0.45, 0.45, 1.0)
+	_btn_tilt.modulate     = Color(1.0, 1.0, 1.0, 1.0) if current == "tilt"     else Color(0.45, 0.45, 0.45, 1.0)
+
 func _animate_hide() -> void:
 	var tween := create_tween()
 	tween.set_parallel(true)
 	var off_left  := Vector2(-1024.0 * 0.8, 0.0)
 	var off_right := Vector2( 1024.0 * 0.8, 0.0)
-	for node in [_tablero, _btn_easy, _btn_normal, _btn_hard, _btn_sound, _btn_how_to_play]:
+	var left_nodes: Array = [_tablero, _btn_easy, _btn_normal, _btn_hard, _btn_sound, _btn_how_to_play]
+	if _btn_settings.visible:
+		left_nodes.append(_btn_settings)
+	for node in left_nodes:
 		if node:
 			tween.tween_property(node, "position",
 				node.position + off_left, HIDE_TIME)

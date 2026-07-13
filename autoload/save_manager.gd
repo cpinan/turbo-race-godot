@@ -34,3 +34,14 @@ func set_best_score(level_name: String, score: int) -> bool:
 		_cfg.save(SAVE_PATH)
 		return true
 	return false
+
+# ---------------------------------------------------------------------------
+# Control type: "joystick" (default) or "tilt"
+# ---------------------------------------------------------------------------
+
+func get_control_type() -> String:
+	return _cfg.get_value("controls", "type", "joystick")
+
+func set_control_type(v: String) -> void:
+	_cfg.set_value("controls", "type", v)
+	_cfg.save(SAVE_PATH)

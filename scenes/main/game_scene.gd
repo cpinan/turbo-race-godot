@@ -31,6 +31,14 @@ const JOY_DEAD_ZONE: float  = 20.0   # screen pixels before registering input
 const JOY_MAX_DIST:  float  = 80.0   # screen pixels for full ±1 velocity
 const PHYSICS_FPS:   float  = 60.0   # reference frame rate for velocity scaling
 
+# Tilt (accelerometer) constants.
+# accel.x in landscape = roll axis (left/right tilt of device).
+# Negate so tilting left side down → player moves up (positive Y in game).
+# Tune TILT_MAX_DIST if sensitivity needs adjustment after on-device testing.
+const TILT_DEAD_ZONE: float = 1.5    # m/s² — below this threshold, no movement
+const TILT_MAX_DIST:  float = 5.0    # m/s² — at this tilt, full-speed movement
+const TILT_X_MULT:    float = 2.0    # extra speed factor for horizontal tilt axis
+
 @export var single_scene: PackedScene
 @export var double_scene: PackedScene
 @export var air_scene:    PackedScene
@@ -55,6 +63,11 @@ var _joy_norm_x: float   = 0.0
 var _joy_norm_y: float   = 0.0
 
 var _debug_overlay: Node2D = null
+var _tilt_log_frame: int    = 0
+var _tilt_baseline: float   = 0.0   # accel.y baseline sampled at game start
+var _tilt_baseline_x: float = 0.0   # accel.x baseline for horizontal movement
+var _tilt_dbg_canvas: CanvasLayer = null
+var _tilt_dbg_label: Label = null
 
 var _floor_sprites:    Array = []
 var _sky_sprites:      Array = []
@@ -138,7 +151,33 @@ func _create_player() -> void:
 # Initialisation — wires level config and spawns initial obstacles
 # ---------------------------------------------------------------------------
 
+func _calibrate_tilt() -> void:
+	if OS.has_feature("android") and SaveManager.get_control_type() == "tilt":
+		var a: Vector3 = Input.get_accelerometer()
+		_tilt_baseline   = a.y
+		_tilt_baseline_x = a.x
+
+func _setup_tilt_debug() -> void:
+	if not debug_collision:
+		return
+	if not OS.has_feature("android"):
+		return
+	if SaveManager.get_control_type() != "tilt":
+		return
+	if _tilt_dbg_canvas != null:
+		return
+	_tilt_dbg_canvas = CanvasLayer.new()
+	_tilt_dbg_canvas.layer = 50
+	add_child(_tilt_dbg_canvas)
+	_tilt_dbg_label = Label.new()
+	_tilt_dbg_label.position = Vector2(10.0, 10.0)
+	_tilt_dbg_label.add_theme_font_size_override("font_size", 40)
+	_tilt_dbg_label.add_theme_color_override("font_color", Color.YELLOW)
+	_tilt_dbg_canvas.add_child(_tilt_dbg_label)
+
 func setup(lane: LaneLayout, level_name: String) -> void:
+	_calibrate_tilt()
+	_setup_tilt_debug()
 	_lane = lane
 	GameManager.configure(level_name, lane)
 	if not GameManager.game_over.is_connected(_on_game_over):
@@ -163,6 +202,7 @@ func _setup_pools() -> void:
 # ---------------------------------------------------------------------------
 
 func restart(level_name: String) -> void:
+	_calibrate_tilt()
 	_paused      = false
 	_joy_active  = false
 	_joy_norm_x  = 0.0
@@ -268,9 +308,40 @@ func _physics_process(delta: float) -> void:
 	if GameManager.game_state != GameManager.GameState.READY:
 		return
 
-	# Apply movement — virtual joystick (left-half touch drag).
+	# Apply movement — tilt (accelerometer) or virtual joystick.
 	if _player:
-		if _joy_active and (_joy_norm_x != 0.0 or _joy_norm_y != 0.0):
+		var is_android: bool    = OS.has_feature("android")
+		var ctrl_type: String   = SaveManager.get_control_type()
+		var tilt_active: bool   = is_android and ctrl_type == "tilt"
+		var accel_dbg: Vector3 = Input.get_accelerometer()
+		if _tilt_dbg_label != null:
+			var dx: float = accel_dbg.x - _tilt_baseline_x
+			var dy: float = accel_dbg.y - _tilt_baseline
+			_tilt_dbg_label.text = (
+				"x=%.1f dx=%.1f\ny=%.1f dy=%.1f" % [accel_dbg.x, dx, accel_dbg.y, dy])
+		_tilt_log_frame += 1
+		if _tilt_log_frame >= 60:
+			_tilt_log_frame = 0
+			print("[TILT] x=", snapped(accel_dbg.x, 0.01),
+				" dx=", snapped(accel_dbg.x - _tilt_baseline_x, 0.01),
+				" y=", snapped(accel_dbg.y, 0.01),
+				" dy=", snapped(accel_dbg.y - _tilt_baseline, 0.01))
+		if tilt_active:
+			var accel: Vector3 = Input.get_accelerometer()
+			var raw_y: float = accel.y - _tilt_baseline
+			var raw_x: float = accel.x - _tilt_baseline_x
+			var norm_y: float = 0.0
+			var norm_x: float = 0.0
+			if absf(raw_y) > TILT_DEAD_ZONE:
+				var t: float = clampf((absf(raw_y) - TILT_DEAD_ZONE) / (TILT_MAX_DIST - TILT_DEAD_ZONE), 0.0, 1.0)
+				norm_y = t if raw_y > 0.0 else -t
+			if absf(raw_x) > TILT_DEAD_ZONE:
+				var t: float = clampf((absf(raw_x) - TILT_DEAD_ZONE) / (TILT_MAX_DIST - TILT_DEAD_ZONE), 0.0, 1.0)
+				norm_x = t if raw_x > 0.0 else -t
+			if norm_y != 0.0 or norm_x != 0.0:
+				var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
+				_player.do_move(Vector2(norm_x * spd * TILT_X_MULT, norm_y * spd), WIN_W)
+		elif _joy_active and (_joy_norm_x != 0.0 or _joy_norm_y != 0.0):
 			var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
 			_player.do_move(Vector2(_joy_norm_x * spd, _joy_norm_y * spd), WIN_W)
 
@@ -352,9 +423,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _paused or GameManager.game_state != GameManager.GameState.READY:
 		return
 
+	var tilt_mode: bool = OS.has_feature("android") and SaveManager.get_control_type() == "tilt"
+
 	if event is InputEventScreenTouch:
 		var left_half: bool = event.position.x < WIN_W * 0.5
-		if left_half:
+		if left_half and not tilt_mode:
 			if event.pressed:
 				_joy_active   = true
 				_joy_index    = event.index
@@ -370,7 +443,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_player.do_jump()
 
 	elif event is InputEventScreenDrag:
-		if _joy_active and event.index == _joy_index:
+		if not tilt_mode and _joy_active and event.index == _joy_index:
 			var dx: float = event.position.x - _joy_anchor_x
 			var dy: float = event.position.y - _joy_anchor_y
 			_joy_norm_x = clampf(dx / JOY_MAX_DIST, -1.0, 1.0)
@@ -381,7 +454,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var left_half: bool = event.position.x < WIN_W * 0.5
-		if left_half:
+		if left_half and not tilt_mode:
 			if event.pressed:
 				_joy_active   = true
 				_joy_index    = -1
@@ -396,7 +469,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.pressed and _player:
 			_player.do_jump()
 
-	elif event is InputEventMouseMotion and _joy_active and _joy_index == -1:
+	elif event is InputEventMouseMotion and not tilt_mode and _joy_active and _joy_index == -1:
 		var dx: float = event.position.x - _joy_anchor_x
 		var dy: float = event.position.y - _joy_anchor_y
 		_joy_norm_x = clampf(dx / JOY_MAX_DIST, -1.0, 1.0)

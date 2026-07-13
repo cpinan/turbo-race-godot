@@ -39,6 +39,10 @@ window/stretch/aspect="ignore"
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/GodotPlayGameServices/plugin.cfg")
 
+[input_devices]
+
+sensors/enable_accelerometer=true
+
 [rendering]
 
 renderer/rendering_method="mobile"

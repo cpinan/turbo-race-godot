@@ -22,7 +22,7 @@ func test_easy_max_world_speed() -> void:
 
 func test_easy_map_size() -> void:
 	var d: LevelData = LevelData.load_level("easy")
-	assert_eq(d.map.size(), 133, "easy map has 133 entries")
+	assert_eq(d.map.size(), 665, "easy map has 665 entries")
 
 func test_normal_speed_multiplier() -> void:
 	var d: LevelData = LevelData.load_level("normal")

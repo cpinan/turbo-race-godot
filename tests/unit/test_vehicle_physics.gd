@@ -62,10 +62,10 @@ func test_airborne_height_at_peak() -> void:
 # --- ground_collision_rect ---
 
 func test_ground_rect_x_position() -> void:
-	# pos_x=200, content_w=60 → bbox_min_x = 200 - 30 = 170; rect.x = 170 + 18 = 188
+	# pos_x=200, content_w=60 → bbox_min_x = 200 - 30 = 170; rect.x = 170 + 60*0.355 = 191.3
 	var r: Rect2 = VehiclePhysics.ground_collision_rect(200.0, 50.0, 60.0, 40.0)
-	assert_almost_eq(r.position.x, 200.0 - 60.0 * 0.5 + 60.0 * 0.3, 0.001,
-		"ground rect x = bbox_min_x + w*0.3")
+	assert_almost_eq(r.position.x, 200.0 - 60.0 * 0.5 + 60.0 * 0.355, 0.001,
+		"ground rect x = bbox_min_x + w*0.355")
 
 func test_ground_rect_y_is_player_y() -> void:
 	var r: Rect2 = VehiclePhysics.ground_collision_rect(200.0, 50.0, 60.0, 40.0)
@@ -73,7 +73,7 @@ func test_ground_rect_y_is_player_y() -> void:
 
 func test_ground_rect_width() -> void:
 	var r: Rect2 = VehiclePhysics.ground_collision_rect(200.0, 50.0, 60.0, 40.0)
-	assert_almost_eq(r.size.x, 60.0 * 0.55, 0.001, "ground rect width = content_w * 0.55")
+	assert_almost_eq(r.size.x, 60.0 * 0.34, 0.001, "ground rect width = content_w * 0.34")
 
 func test_ground_rect_height() -> void:
 	var r: Rect2 = VehiclePhysics.ground_collision_rect(200.0, 50.0, 60.0, 40.0)

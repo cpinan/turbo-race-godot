@@ -169,6 +169,10 @@ All assets are direct ports from the original Cocos2d-x `Resources/` folder.
 | `ic_launcher_foreground_432.png` | Adaptive icon foreground (432×432) |
 | `ic_launcher_background_432.png` | Adaptive icon background (432×432, solid #2D2D2D) |
 | `game_icon.png` | Splash / store icon |
+| `ajustes.png / ajustes_off.png` | Settings gear button (pressed / normal) |
+| `controls_options.png` | Control-type panel background |
+| `control_joystick.png` | Joystick option button in control panel |
+| `control_tilt.png` | Tilt option button in control panel |
 
 ### Audio (`resources/audio/`)
 
@@ -196,9 +200,9 @@ JSON files loaded at runtime by `LevelLoader`. Schema documented in `docs/LEVEL_
 
 | File | Description |
 |------|-------------|
-| `easy.json` | Slow speed, fewer obstacles, wide lanes |
-| `normal.json` | Mid difficulty |
-| `hard.json` | Fast speed, dense spawning |
+| `easy.json` | 665 entries — slow speed (1.0×), codes 0-5/8-9 only, phased ramp from pure singles to mixed doubles |
+| `normal.json` | 665 entries — mid speed (1.7×), all obstacle codes 0-9, balanced density |
+| `hard.json` | 665 entries — fast speed (2.2×), heavy 6/7/8/9 throughout |
 | `story.json` | Scripted sequence (same schema) |
 
 ---
@@ -260,6 +264,8 @@ The vehicle ground/air rects are derived from `BaseVehicle::getGroundCollision()
 | Left-half drag → `doMove(Vec2)` (X + Y) | `InputEventScreenDrag` → `do_move(vel)` |
 | Right-half tap → `doJump()` | `InputEventScreenTouch` right-half |
 | `SneakyJoystickSkinnedBase` thumb visual | `hud.gd _input()` → `_joy_thumb.position` |
+| — (Android only addition) | Accelerometer tilt: `accel.y` → vertical, `accel.x` → horizontal; calibrated at game start; dead zone 1.5 m/s², full speed at 5.0 m/s² |
+| — (Android only addition) | Settings gear on home screen → control-type panel (joystick / tilt); persisted via `SaveManager.get/set_control_type()` |
 
 ### Z-depth ordering
 
