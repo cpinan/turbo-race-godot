@@ -79,27 +79,26 @@ offset_bottom = 747.0
 
 [node name="BtnSettings" type="TextureButton" parent="Menu"]
 visible = false
-offset_left = 152.0
+offset_left = 586.0
 offset_top = 649.0
-offset_right = 264.0
-offset_bottom = 758.0
+offset_right = 684.0
+offset_bottom = 747.0
 texture_normal = ExtResource("15")
 texture_pressed = ExtResource("14")
 
 [node name="BtnAchievements" type="TextureButton" parent="Menu"]
-visible = false
-offset_left = 310.0
+offset_left = 150.0
 offset_top = 652.0
-offset_right = 420.0
+offset_right = 250.0
 offset_bottom = 747.0
 texture_normal = ExtResource("16")
 texture_pressed = ExtResource("17")
 
 [node name="BtnLeaderboard" type="TextureButton" parent="Menu"]
 visible = false
-offset_left = 436.0
+offset_left = 262.0
 offset_top = 652.0
-offset_right = 546.0
+offset_right = 362.0
 offset_bottom = 747.0
 texture_normal = ExtResource("18")
 texture_pressed = ExtResource("19")

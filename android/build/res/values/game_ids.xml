@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Google Play Games Services App ID.
-    Find this in: Play Console → Play Games Services → Setup → Get resources → XML values.
-    Replace REPLACE_WITH_YOUR_APP_ID with the numeric ID (e.g. "123456789012").
-    This file must stay out of version control if the ID is sensitive,
-    but these are public identifiers — same as in Constants.h.
--->
 <resources>
-    <string name="game_services_project_id" translatable="false">REPLACE_WITH_YOUR_APP_ID</string>
+    <string name="game_services_project_id" translatable="false">893066960841</string>
 </resources>

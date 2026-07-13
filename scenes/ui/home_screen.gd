@@ -47,18 +47,18 @@ func _ready() -> void:
 	_btn_sound.pressed.connect(_on_sound)
 	_btn_how_to_play.pressed.connect(_on_how_to_play)
 
-	# Settings gear + GPGS buttons — Android only
+	# Achievements always visible; leaderboard + settings gear Android only
 	var is_mobile: bool = OS.has_feature("android")
-	_btn_settings.visible     = is_mobile
-	_btn_achievements.visible = is_mobile
-	_btn_leaderboard.visible  = is_mobile
+	_btn_settings.visible    = is_mobile
+	_btn_leaderboard.visible = is_mobile
+	_btn_achievements.visible = true
+	_btn_achievements.pressed.connect(_on_achievements)
 	if is_mobile:
 		_btn_settings.pressed.connect(_on_settings)
 		_btn_joystick.pressed.connect(func(): _set_control("joystick"))
 		_btn_tilt.pressed.connect(func(): _set_control("tilt"))
 		_dim_bg.gui_input.connect(_on_dim_bg_input)
 		_update_control_buttons()
-		_btn_achievements.pressed.connect(_on_achievements)
 		_btn_leaderboard.pressed.connect(_on_leaderboard)
 
 	_control_panel.visible = false
@@ -119,12 +119,14 @@ func _on_settings() -> void:
 	_control_panel.visible = true
 
 func _on_achievements() -> void:
+	print("HomeScreen: _on_achievements pressed disabled=", _disabled)
 	if _disabled:
 		return
 	AudioManager.play_sfx(AudioManager.SFX_BUTTON)
 	LeaderboardService.show_achievements()
 
 func _on_leaderboard() -> void:
+	print("HomeScreen: _on_leaderboard pressed disabled=", _disabled)
 	if _disabled:
 		return
 	AudioManager.play_sfx(AudioManager.SFX_BUTTON)
@@ -160,11 +162,9 @@ func _animate_hide() -> void:
 	tween.set_parallel(true)
 	var off_left  := Vector2(-1024.0 * 0.8, 0.0)
 	var off_right := Vector2( 1024.0 * 0.8, 0.0)
-	var left_nodes: Array = [_tablero, _btn_easy, _btn_normal, _btn_hard, _btn_sound, _btn_how_to_play]
+	var left_nodes: Array = [_tablero, _btn_easy, _btn_normal, _btn_hard, _btn_sound, _btn_how_to_play, _btn_achievements]
 	if _btn_settings.visible:
 		left_nodes.append(_btn_settings)
-	if _btn_achievements.visible:
-		left_nodes.append(_btn_achievements)
 	if _btn_leaderboard.visible:
 		left_nodes.append(_btn_leaderboard)
 	for node in left_nodes:

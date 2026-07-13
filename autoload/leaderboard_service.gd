@@ -38,29 +38,48 @@ const ACH_TOTAL_SCORE_100000:        String = "CgkIyb_B9_4ZEAIQEQ"
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
-var _signed_in: bool  = false
-var _plugin:    Object = null   # GodotPlayGameServices.android_plugin once ready
+const _PLUGIN_NAME: String = "GodotPlayGameServices"
+
+var _signed_in:   bool   = false
+var _signing_in:  bool   = false
+var _plugin:      Object = null   # native Kotlin GodotPlayGameServices singleton
 
 signal signed_in
 signal sign_in_failed
 
 func _ready() -> void:
+	print("LeaderboardService: _ready, android=", OS.has_feature("android"))
 	if not OS.has_feature("android"):
 		return
-	var err: int = GodotPlayGameServices.initialize()
-	if err != GodotPlayGameServices.PlayGamesPluginError.OK:
-		printerr("LeaderboardService: GPGS plugin not found")
+	var has_singleton: bool = Engine.has_singleton(_PLUGIN_NAME)
+	print("LeaderboardService: has_singleton=", has_singleton)
+	if not has_singleton:
+		printerr("LeaderboardService: GPGS native plugin not found")
 		return
-	_plugin = GodotPlayGameServices.android_plugin
+	_plugin = Engine.get_singleton(_PLUGIN_NAME)
+	print("LeaderboardService: plugin=", _plugin)
+	_plugin.initialize()
+	print("LeaderboardService: initialize() called")
 	_plugin.userAuthenticated.connect(_on_authenticated)
-	_plugin.isAuthenticated()   # triggers sign-in popup / check
+	print("LeaderboardService: signal connected, calling isAuthenticated()")
+	_plugin.isAuthenticated()
 
 func _on_authenticated(ok: bool) -> void:
+	print("LeaderboardService: _on_authenticated ok=", ok)
+	_signing_in = false
 	_signed_in = ok
 	if ok:
 		emit_signal("signed_in")
 	else:
 		emit_signal("sign_in_failed")
+
+func _try_sign_in() -> void:
+	if _plugin == null or _signing_in or _signed_in:
+		print("LeaderboardService: _try_sign_in skipped plugin=", _plugin, " signing_in=", _signing_in, " signed_in=", _signed_in)
+		return
+	print("LeaderboardService: calling signIn()")
+	_signing_in = true
+	_plugin.signIn()
 
 # ---------------------------------------------------------------------------
 # Score submission — call every game-over; GPGS deduplicates if not a new high.
@@ -92,12 +111,21 @@ func unlock_achievement(id: String) -> void:
 # ---------------------------------------------------------------------------
 
 func show_achievements() -> void:
-	if _plugin == null or not _signed_in:
+	print("LeaderboardService: show_achievements plugin=", _plugin, " signed_in=", _signed_in)
+	if _plugin == null:
 		return
+	if not _signed_in:
+		_try_sign_in()
+		return
+	print("LeaderboardService: calling showAchievements()")
 	_plugin.showAchievements()
 
 func show_leaderboard_for_level(level_name: String) -> void:
-	if _plugin == null or not _signed_in:
+	print("LeaderboardService: show_leaderboard_for_level level=", level_name, " plugin=", _plugin, " signed_in=", _signed_in)
+	if _plugin == null:
+		return
+	if not _signed_in:
+		_try_sign_in()
 		return
 	var lid: String = _leaderboard_id_for_level(level_name)
 	if lid.is_empty():
@@ -106,8 +134,13 @@ func show_leaderboard_for_level(level_name: String) -> void:
 		_plugin.showLeaderboard(lid)
 
 func show_all_leaderboards() -> void:
-	if _plugin == null or not _signed_in:
+	print("LeaderboardService: show_all_leaderboards plugin=", _plugin, " signed_in=", _signed_in)
+	if _plugin == null:
 		return
+	if not _signed_in:
+		_try_sign_in()
+		return
+	print("LeaderboardService: calling showAllLeaderboards()")
 	_plugin.showAllLeaderboards()
 
 # ---------------------------------------------------------------------------
