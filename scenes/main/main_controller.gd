@@ -96,4 +96,13 @@ func _on_game_over() -> void:
 	AudioManager.stop_music()
 	await get_tree().create_timer(1.5).timeout
 	var score: GameScore = ScoreModel.current_score()
+	var score_val:  int  = score.total_score()
+	var avoided:    int  = score.obstacles_avoided
+	var jumped:     int  = score.obstacles_jumped
+	var used_tilt:  bool = OS.has_feature("android") and SaveManager.get_control_type() == "tilt"
+
+	SaveManager.record_game_result(score_val, jumped)
+	LeaderboardService.submit_score_for_level(_current_level, score_val)
+	AchievementChecker.check(_current_level, score_val, avoided, used_tilt)
+
 	_game_over.show_result(_current_level, score)

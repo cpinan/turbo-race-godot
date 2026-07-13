@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://ds7bph3kl2m5n"]
+[gd_scene load_steps=20 format=3 uid="uid://ds7bph3kl2m5n"]
 
 [ext_resource type="Script" path="res://scenes/ui/home_screen.gd" id="1"]
 [ext_resource type="Texture2D" path="res://resources/assets/tablero_title.png" id="2"]
@@ -15,6 +15,10 @@
 [ext_resource type="Texture2D" uid="uid://d3mw2ehli8iix" path="res://resources/assets/control_tilt.png" id="13"]
 [ext_resource type="Texture2D" uid="uid://cyjmfdrhj7324" path="res://resources/assets/ajustes.png" id="14"]
 [ext_resource type="Texture2D" uid="uid://dr7hulgxwxvvr" path="res://resources/assets/ajustes_off.png" id="15"]
+[ext_resource type="Texture2D" path="res://resources/assets/achievement_off.png" id="16"]
+[ext_resource type="Texture2D" path="res://resources/assets/achievement.png" id="17"]
+[ext_resource type="Texture2D" path="res://resources/assets/btn_chart_2_off.png" id="18"]
+[ext_resource type="Texture2D" path="res://resources/assets/btn_chart_2.png" id="19"]
 
 [node name="HomeScreen" type="CanvasLayer"]
 layer = 10
@@ -81,6 +85,24 @@ offset_right = 264.0
 offset_bottom = 758.0
 texture_normal = ExtResource("15")
 texture_pressed = ExtResource("14")
+
+[node name="BtnAchievements" type="TextureButton" parent="Menu"]
+visible = false
+offset_left = 310.0
+offset_top = 652.0
+offset_right = 420.0
+offset_bottom = 747.0
+texture_normal = ExtResource("16")
+texture_pressed = ExtResource("17")
+
+[node name="BtnLeaderboard" type="TextureButton" parent="Menu"]
+visible = false
+offset_left = 436.0
+offset_top = 652.0
+offset_right = 546.0
+offset_bottom = 747.0
+texture_normal = ExtResource("18")
+texture_pressed = ExtResource("19")
 
 [node name="BtnHowToPlay" type="Button" parent="Menu"]
 offset_left = 690.0

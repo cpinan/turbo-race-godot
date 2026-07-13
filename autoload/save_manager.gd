@@ -1,6 +1,7 @@
 extends Node
 # Autoload: SaveManager
-# Mirrors LocalStorageManager — persists best scores, mute state, control type.
+# Mirrors LocalStorageManager — persists best scores, mute state, control type,
+# cumulative stats, and local achievement unlock state.
 
 const SAVE_PATH: String = "user://save.cfg"
 
@@ -44,4 +45,42 @@ func get_control_type() -> String:
 
 func set_control_type(v: String) -> void:
 	_cfg.set_value("controls", "type", v)
+	_cfg.save(SAVE_PATH)
+
+# ---------------------------------------------------------------------------
+# Cumulative stats — mirrors LocalStorageManager USER_TOTAL_* keys
+# ---------------------------------------------------------------------------
+
+func get_total_games_played() -> int:
+	return _cfg.get_value("stats", "total_games_played", 0)
+
+func get_total_score() -> int:
+	return _cfg.get_value("stats", "total_score", 0)
+
+func get_total_obstacles_jumped() -> int:
+	return _cfg.get_value("stats", "total_obstacles_jumped", 0)
+
+func get_average_score() -> float:
+	var games: int = get_total_games_played()
+	if games == 0:
+		return 0.0
+	return float(get_total_score()) / float(games)
+
+# Called once per game-over. Updates all cumulative stats in one save.
+func record_game_result(score: int, obstacles_jumped: int) -> void:
+	_cfg.set_value("stats", "total_games_played",     get_total_games_played() + 1)
+	_cfg.set_value("stats", "total_score",            get_total_score() + score)
+	_cfg.set_value("stats", "total_obstacles_jumped", get_total_obstacles_jumped() + obstacles_jumped)
+	_cfg.save(SAVE_PATH)
+
+# ---------------------------------------------------------------------------
+# Achievement local state — mirrors LocalStorageManager::isAchievementUnlocked
+# Keys are the raw GPGS achievement IDs (user_data_id was always "" in C++).
+# ---------------------------------------------------------------------------
+
+func is_achievement_unlocked(id: String) -> bool:
+	return _cfg.get_value("achievements", id, false)
+
+func mark_achievement_unlocked(id: String) -> void:
+	_cfg.set_value("achievements", id, true)
 	_cfg.save(SAVE_PATH)

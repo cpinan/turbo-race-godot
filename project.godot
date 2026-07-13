@@ -26,6 +26,7 @@ GameManager="*res://autoload/game_manager.gd"
 ScoreModel="*res://autoload/score_model.gd"
 LevelLoader="*res://autoload/level_loader.gd"
 LeaderboardService="*res://autoload/leaderboard_service.gd"
+AchievementChecker="*res://autoload/achievement_checker.gd"
 GodotPlayGameServices="*uid://br5jdflguv57u"
 
 [display]

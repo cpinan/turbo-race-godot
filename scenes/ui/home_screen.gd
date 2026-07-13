@@ -20,8 +20,10 @@ var _disabled: bool = false
 @onready var _btn_hard:        TextureButton = $Menu/BtnHard
 @onready var _btn_sound:       TextureButton = $Menu/BtnSound
 @onready var _btn_how_to_play: Button        = $Menu/BtnHowToPlay
-@onready var _btn_settings:    TextureButton = $Menu/BtnSettings
-@onready var _control_panel:   Control       = $ControlPanel
+@onready var _btn_settings:      TextureButton = $Menu/BtnSettings
+@onready var _btn_achievements:  TextureButton = $Menu/BtnAchievements
+@onready var _btn_leaderboard:   TextureButton = $Menu/BtnLeaderboard
+@onready var _control_panel:     Control       = $ControlPanel
 @onready var _dim_bg:          ColorRect     = $ControlPanel/DimBackground
 @onready var _btn_joystick:    TextureButton = $ControlPanel/BtnJoystick
 @onready var _btn_tilt:        TextureButton = $ControlPanel/BtnTilt
@@ -45,15 +47,19 @@ func _ready() -> void:
 	_btn_sound.pressed.connect(_on_sound)
 	_btn_how_to_play.pressed.connect(_on_how_to_play)
 
-	# Settings gear — Android only (add OS.has_feature("ios") when iOS is supported)
+	# Settings gear + GPGS buttons — Android only
 	var is_mobile: bool = OS.has_feature("android")
-	_btn_settings.visible = is_mobile
+	_btn_settings.visible     = is_mobile
+	_btn_achievements.visible = is_mobile
+	_btn_leaderboard.visible  = is_mobile
 	if is_mobile:
 		_btn_settings.pressed.connect(_on_settings)
 		_btn_joystick.pressed.connect(func(): _set_control("joystick"))
 		_btn_tilt.pressed.connect(func(): _set_control("tilt"))
 		_dim_bg.gui_input.connect(_on_dim_bg_input)
 		_update_control_buttons()
+		_btn_achievements.pressed.connect(_on_achievements)
+		_btn_leaderboard.pressed.connect(_on_leaderboard)
 
 	_control_panel.visible = false
 
@@ -112,6 +118,18 @@ func _on_settings() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_BUTTON)
 	_control_panel.visible = true
 
+func _on_achievements() -> void:
+	if _disabled:
+		return
+	AudioManager.play_sfx(AudioManager.SFX_BUTTON)
+	LeaderboardService.show_achievements()
+
+func _on_leaderboard() -> void:
+	if _disabled:
+		return
+	AudioManager.play_sfx(AudioManager.SFX_BUTTON)
+	LeaderboardService.show_all_leaderboards()
+
 func _set_control(type: String) -> void:
 	SaveManager.set_control_type(type)
 	_update_control_buttons()
@@ -145,6 +163,10 @@ func _animate_hide() -> void:
 	var left_nodes: Array = [_tablero, _btn_easy, _btn_normal, _btn_hard, _btn_sound, _btn_how_to_play]
 	if _btn_settings.visible:
 		left_nodes.append(_btn_settings)
+	if _btn_achievements.visible:
+		left_nodes.append(_btn_achievements)
+	if _btn_leaderboard.visible:
+		left_nodes.append(_btn_leaderboard)
 	for node in left_nodes:
 		if node:
 			tween.tween_property(node, "position",
