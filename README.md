@@ -45,11 +45,11 @@ git clone git@github.com:cpinan/turbo-race-godot.git
 ```sh
 godot --headless --path . \
   -s addons/gut/gut_cmdln.gd \
-  -gdir=res://tests -gprefix=test_ -ginclude_subdirs -gexit
+  -gdir=res://tests/unit -gprefix=test_ -gsuffix=.gd -gexit
 ```
 
 CI runs this on every push via `.github/workflows/tests.yml`.
-Current status: **116 tests, 116 passing.**
+Current status: **110 tests, 110 passing.**
 
 ---
 
@@ -328,8 +328,48 @@ Pattern used: set GameScene root `scale = Vector2(1, -1)`, `position = Vector2(0
 | 2 | Physics/collision core (pure functions + 66 unit tests) | ✅ Done |
 | 3 | Core loop, obstacle pool, level loader, game manager, all UI screens | ✅ Done |
 | 4 | Schema versioning, external level loading, WideObstacle extension proof | ✅ Done |
-| 5 | Android leaderboard (Google Play Games Services, graceful degradation) | ✅ Done |
-| 6 | Docs finalization, full regression pass — 116/116 tests green | ✅ Done |
+| 5 | Android leaderboard + achievements (Google Play Games Services, graceful degradation) | ✅ Done |
+| 6 | Docs finalization, full regression pass — 110/110 tests green | ✅ Done |
+
+---
+
+## Google Play Games Services (Android)
+
+### Setup
+
+GPGS is integrated via [GodotPlayGameServices v3.2.0](https://github.com/Iakobs/godot-play-game-services).
+
+**`android/build/res/values/game_ids.xml`** — contains the numeric App ID (public identifier, safe to commit):
+```xml
+<string name="game_services_project_id" translatable="false">893066960841</string>
+```
+
+**Never commit `export_presets.cfg`** — contains keystore path and password.
+
+### Play Console requirements for sign-in to work
+
+1. **App ID** registered in Play Games Services configuration (already done — `893066960841`)
+2. **OAuth credential** with correct SHA-1 fingerprint for the signing certificate:
+   - Release builds: `6B:A5:95:1A:CB:EE:71:CF:3A:7F:35:14:0A:E0:07:E0:94:83:06:98`
+   - Debug builds (Godot default cert): `D8:C1:21:41:1E:46:92:2C:5D:6E:2F:7B:B8:15:BC:2A:AE:ED:B4:15`
+3. **Game configuration published** (even in Draft, must be published for testers to sign in)
+4. **Tester email added** in Play Games Services → Setup and management → Testers
+
+### Features implemented
+
+| Feature | Location |
+|---------|----------|
+| Sign-in (automatic on launch, retry on button press) | `autoload/leaderboard_service.gd` |
+| Score submission per level on every game-over | `autoload/leaderboard_service.gd` |
+| 20 achievement rules (ported from `GameLayer::_checkAchievements()`) | `autoload/achievement_checker.gd` |
+| Local achievement unlock state (prevents duplicate GPGS calls) | `autoload/save_manager.gd` |
+| Cumulative stats: games played, total score, obstacles jumped | `autoload/save_manager.gd` |
+| Achievement + leaderboard overlay buttons (Android home screen) | `scenes/ui/home_screen.gd` |
+| Graceful degradation — all calls no-op when plugin unavailable | `autoload/leaderboard_service.gd` |
+
+### Achievement IDs
+
+All 20 achievement IDs and 3 leaderboard IDs are defined as constants in `autoload/leaderboard_service.gd` and match `android/build/res/values/game_ids.xml`.
 
 ---
 
@@ -404,6 +444,42 @@ The skill covers:
 - Android Play Store release: AAB build, symbols zip, version code verification
 - Parallax scroll, obstacle pooling, scoring, world speed constants
 - Parity verification checklist
+
+---
+
+## Changelog
+
+### Phase 5 — Google Play Games Services (2026-07-13)
+
+**Leaderboard & achievements:**
+- `autoload/achievement_checker.gd` — new autoload; ports all 20 achievement rules from `GameLayer::_checkAchievements()` exactly; local-first guard via `SaveManager` prevents duplicate GPGS calls
+- `autoload/leaderboard_service.gd` — rewritten; uses `Engine.get_singleton("GodotPlayGameServices")` directly (native Kotlin plugin, Android-only); adds `show_achievements()`, `show_all_leaderboards()`, `show_leaderboard_for_level()`; sign-in loop guard via `_signing_in` flag
+- `autoload/save_manager.gd` — added cumulative stats (`total_games_played`, `total_score`, `total_obstacles_jumped`) and local achievement unlock state; mirrors `LocalStorageManager` from C++
+- `scenes/main/main_controller.gd` — `_on_game_over()` now calls `SaveManager.record_game_result()`, `LeaderboardService.submit_score_for_level()`, `AchievementChecker.check()` after every run
+- `android/build/res/values/game_ids.xml` — set `game_services_project_id` to `893066960841` (was placeholder)
+- `project.godot` — `AchievementChecker` registered as autoload
+
+**Home screen UI (Android):**
+- Added `BtnAchievements` and `BtnLeaderboard` buttons next to sound button (bottom-left area)
+- `BtnSettings` moved to bottom-right corner next to "How to Play"
+- All three buttons Android-only (require GPGS)
+
+**Sign-in fix:**
+- Fixed infinite sign-in loop: `_signing_in` guard prevents re-entrant `signIn()` calls
+- Added debug logging (`print`) for sign-in flow — readable via `adb logcat -s godot:D`
+- Root cause of initial failure: debug APK uses Godot's default certificate, not the release keystore; both SHA-1 fingerprints now registered in Play Console
+
+### Accelerometer tilt control (2026-07-13)
+
+- `accel.y` → vertical movement (top/bottom tilt in landscape); `accel.x` → horizontal (left/right tilt)
+- Calibrated at game start via `_calibrate_tilt()`; dead zone 1.5 m/s², full speed at 5.0 m/s²; X axis 2× speed multiplier
+- Settings gear (Android) on home screen — joystick vs tilt selector, persisted via `SaveManager`
+- Debug overlay shows live accel values when tilt mode active and `debug_collision = true`
+
+### Level expansion (2026-07-13)
+
+- Easy / Normal / Hard levels expanded from 133 → 665 entries each (5× longer)
+- Difficulty-adapted obstacle mix per level
 
 ---
 

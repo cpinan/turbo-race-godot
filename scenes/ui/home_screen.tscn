@@ -87,6 +87,7 @@ texture_normal = ExtResource("15")
 texture_pressed = ExtResource("14")
 
 [node name="BtnAchievements" type="TextureButton" parent="Menu"]
+visible = false
 offset_left = 150.0
 offset_top = 652.0
 offset_right = 250.0
