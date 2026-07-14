@@ -35,6 +35,7 @@ func _show_home() -> void:
 	_hud.hide_hud()
 	_game_scene.reset_for_home()
 	AudioManager.stop_music()
+	AdManager.on_home_screen_shown()
 
 	var home_scene: PackedScene = load("res://scenes/ui/home_screen.tscn")
 	var home: HomeScreen = home_scene.instantiate()
@@ -45,6 +46,7 @@ func _show_home() -> void:
 func _on_level_selected(level_name: String) -> void:
 	_show_tutorial = false
 	_current_level = level_name
+	AdManager.hide_banner()
 	_game_scene.restart(level_name)
 	_hud.show_hud()
 	var track: String = AudioManager.play_music()
