@@ -1,2 +1,1 @@
-# Remove /bin folder line if you want to commit
-/bin
+# bin/ committed for reproducible CI builds (AARs for Godot 4.7, plugin v4.3.1)
