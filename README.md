@@ -6,6 +6,8 @@ Full rewrite of the original **Turbo Race** endless-runner mobile game from Coco
 
 The original C++ source lives at `../Turbo-Race/` (separate repo). It is the behavioral reference — never modified.
 
+[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">](https://play.google.com/store/apps/details?id=com.carlos.pinan.turborace.godot)
+
 ---
 
 ## Versions
@@ -49,7 +51,7 @@ godot --headless --path . \
 ```
 
 CI runs this on every push via `.github/workflows/tests.yml`.
-Current status: **110 tests, 110 passing.**
+Current status: **128 tests, 128 passing.**
 
 ---
 
@@ -329,7 +331,8 @@ Pattern used: set GameScene root `scale = Vector2(1, -1)`, `position = Vector2(0
 | 3 | Core loop, obstacle pool, level loader, game manager, all UI screens | ✅ Done |
 | 4 | Schema versioning, external level loading, WideObstacle extension proof | ✅ Done |
 | 5 | Android leaderboard + achievements (Google Play Games Services, graceful degradation) | ✅ Done |
-| 6 | Docs finalization, full regression pass — 110/110 tests green | ✅ Done |
+| 6 | Docs finalization, full regression pass — 128/128 tests green | ✅ Done |
+| 7 | AdMob banner ads — GDPR/UMP consent, Android only, state-driven show/hide | ✅ Done |
 
 ---
 
@@ -448,6 +451,15 @@ The skill covers:
 ---
 
 ## Changelog
+
+### Phase 7 — AdMob banner ads (2026-07-14)
+
+- `autoload/ad_manager.gd` — new autoload; GDPR/UMP consent flow before SDK init; Leaderboard banner (728×90dp) at top of screen; state-driven: hidden during READY/PREPARING, shown on HOME/PAUSE/GAME_OVER; all calls fire-and-forget, never blocks gameplay; Android-only guard so tests pass in headless
+- `scenes/main/main_controller.gd` — `_show_home()` calls `AdManager.on_home_screen_shown()`; `_on_level_selected()` calls `AdManager.hide_banner()` before game starts
+- `project.godot` — `AdManager` registered as autoload; admob plugin enabled
+- `tests/unit/test_ad_manager.gd` — 7 tests verifying graceful degradation on non-Android
+- **AdMob IDs**: App `ca-app-pub-8297579382369512~9496204888`, Banner unit `ca-app-pub-8297579382369512/5828422617`
+- **Note**: GDPR message must be configured in AdMob console (Privacy & messaging) before EU release; fallthrough to ad load on consent error is intentional
 
 ### Phase 5 — Google Play Games Services (2026-07-13)
 

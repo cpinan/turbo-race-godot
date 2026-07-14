@@ -440,7 +440,90 @@ standardRelease/processStandardReleaseManifest/AndroidManifest.xml
 
 ---
 
-## 17. GUT test commands
+## 17. Android accelerometer tilt control
+
+Godot's `Input.get_accelerometer()` returns **device-frame (portrait) coordinates** and does NOT adjust for screen orientation. Theoretical axis predictions are unreliable — always verify on-device.
+
+**Enable in project.godot** (disabled by default; without this, returns Vector3.ZERO silently):
+```ini
+[input_devices]
+sensors/enable_accelerometer=true
+```
+
+**Empirically confirmed mapping for SCREEN_LANDSCAPE:**
+- `accel.y` → vertical player movement (tilt top of screen up/down)
+- `accel.x` → horizontal player movement (roll screen left/right)
+
+**Implementation pattern:**
+```gdscript
+# Constants
+const TILT_DEAD_ZONE: float = 1.5   # m/s² — below this: no movement
+const TILT_MAX_DIST:  float = 5.0   # m/s² — at this tilt: full speed
+const TILT_X_MULT:    float = 2.0   # horizontal axis needs extra speed for feel parity
+
+# Calibration — call at game start and on restart
+var _tilt_baseline:   float = 0.0
+var _tilt_baseline_x: float = 0.0
+
+func _calibrate_tilt() -> void:
+    if OS.has_feature("android") and SaveManager.get_control_type() == "tilt":
+        var a: Vector3 = Input.get_accelerometer()
+        _tilt_baseline   = a.y
+        _tilt_baseline_x = a.x
+
+# Per-frame in _physics_process
+func _apply_tilt(delta: float) -> void:
+    var accel: Vector3 = Input.get_accelerometer()
+    var raw_y: float   = accel.y - _tilt_baseline
+    var raw_x: float   = accel.x - _tilt_baseline_x
+    var norm_y: float  = 0.0
+    var norm_x: float  = 0.0
+    if absf(raw_y) > TILT_DEAD_ZONE:
+        var t := clampf((absf(raw_y) - TILT_DEAD_ZONE) / (TILT_MAX_DIST - TILT_DEAD_ZONE), 0.0, 1.0)
+        norm_y = t if raw_y > 0.0 else -t   # positive accel.y → player UP
+    if absf(raw_x) > TILT_DEAD_ZONE:
+        var t := clampf((absf(raw_x) - TILT_DEAD_ZONE) / (TILT_MAX_DIST - TILT_DEAD_ZONE), 0.0, 1.0)
+        norm_x = t if raw_x > 0.0 else -t   # positive accel.x → player RIGHT
+    if norm_y != 0.0 or norm_x != 0.0:
+        var spd := VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
+        _player.do_move(Vector2(norm_x * spd * TILT_X_MULT, norm_y * spd), WIN_W)
+```
+
+**Real-time debug overlay** (gate on `debug_collision` export var; remove in release):
+```gdscript
+var _tilt_dbg_canvas: CanvasLayer = null
+var _tilt_dbg_label:  Label       = null
+
+func _setup_tilt_debug() -> void:
+    if not debug_collision or not OS.has_feature("android"): return
+    if SaveManager.get_control_type() != "tilt": return
+    _tilt_dbg_canvas = CanvasLayer.new()
+    _tilt_dbg_canvas.layer = 50
+    add_child(_tilt_dbg_canvas)
+    _tilt_dbg_label = Label.new()
+    _tilt_dbg_label.position = Vector2(10.0, 10.0)
+    _tilt_dbg_label.add_theme_font_size_override("font_size", 40)
+    _tilt_dbg_label.add_theme_color_override("font_color", Color.YELLOW)
+    _tilt_dbg_canvas.add_child(_tilt_dbg_label)
+
+# In _physics_process, every frame:
+if _tilt_dbg_label != null:
+    var a := Input.get_accelerometer()
+    _tilt_dbg_label.text = "x=%.1f dx=%.1f\ny=%.1f dy=%.1f" % [
+        a.x, a.x - _tilt_baseline_x, a.y, a.y - _tilt_baseline]
+```
+
+CanvasLayer bypasses the parent's Y-flip transform, so positions are in screen space — no coordinate conversion needed.
+
+**Tilt mode wiring:**
+- Hide joystick in HUD when tilt active: `_joy_bg.visible = not tilt_mode`
+- Skip joystick input in `_unhandled_input` when tilt active
+- Any screen touch in tilt mode = jump (no left/right split)
+- Persist choice via `SaveManager.get/set_control_type()` (values: `"joystick"` / `"tilt"`)
+
+---
+
+## 18. GUT test commands
 
 ```sh
 # Run all tests headless

@@ -101,7 +101,7 @@ func _load_banner() -> void:
 	if _ad_view != null:
 		_ad_view.destroy()
 		_ad_view = null
-	var ad_size = _AdSize.get_current_orientation_anchored_adaptive_banner_ad_size(_AdSize.FULL_WIDTH)
+	var ad_size = _AdSize.new(728, 90)
 	_ad_view = _AdView.new(BANNER_AD_UNIT_ID, ad_size, _AdPosition.Values.TOP)
 	var listener = _AdListener.new()
 	listener.on_ad_loaded = _on_banner_loaded
@@ -110,8 +110,11 @@ func _load_banner() -> void:
 	_ad_view.load_ad(_AdRequest.new())
 
 func _on_banner_loaded() -> void:
-	print("AdManager: banner loaded")
 	_banner_loaded = true
+	print("AdManager: banner loaded — w=%d h=%d px=%dx%d" % [
+		_ad_view.get_width(), _ad_view.get_height(),
+		_ad_view.get_width_in_pixels(), _ad_view.get_height_in_pixels()
+	])
 	var state: GameManager.GameState = GameManager.game_state
 	if state not in [GameManager.GameState.READY, GameManager.GameState.PREPARING]:
 		_ad_view.show()
