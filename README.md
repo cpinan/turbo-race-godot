@@ -20,8 +20,8 @@ The original C++ source lives at `../Turbo-Race/` (separate repo). It is the beh
 | GUT (test framework) | 9.7.0 |
 | Android min SDK | 24 (Android 7.0) |
 | Android target SDK | 35 (Android 15) |
-| App version name | 1.1.0 |
-| App version code | 5 |
+| App version name | 1.2.0 |
+| App version code | 6 |
 | Package | `com.carlos.pinan.turborace.godot` |
 | GDScript | Static-typed throughout |
 
@@ -459,15 +459,15 @@ Full changelog: [CHANGELOG.md](CHANGELOG.md)
 ### [1.2.0] — 2026-07-14
 
 #### Added
-- **AdMob banner ad** (poingstudios/godot-admob-plugin v4.3.1): Leaderboard format (728×90dp), centered at top of screen
-- **GDPR/UMP consent flow** — runs before SDK init; falls through gracefully if AdMob console misconfigured
-- **AdManager autoload** — state-driven show/hide: banner hidden during READY/PREPARING, shown on HOME/PAUSE/GAME_OVER; all calls fire-and-forget, never blocks gameplay; Android-only guard ensures headless tests pass
-- **7 AdManager unit tests** verifying graceful degradation on non-Android
-- **GitHub Pages landing site** (`index.html`) — dark theme, Play Store CTA, feature grid, gameplay stats, tech stack
-- **README**: Play Store badge, site link, Phase 7 migration entry
+- **AdMob banner ad** (poingstudios/godot-admob-plugin v4.3.1): Leaderboard format (728×90dp), centered at top; hidden during gameplay, shown on HOME/PAUSE/GAME_OVER
+- **Interstitial ad** every 5 games: full-screen ad after game-over when `total_games_played % 5 == 0`; reloads after dismissal; never blocks gameplay
+- **GDPR/UMP consent flow** — before SDK init; falls through gracefully on error
+- **AdManager autoload** — state-driven banner show/hide; Android-only guard; 133 tests passing
+- **GitHub Pages site** (`index.html`) — dark theme, Play Store CTA, feature grid
 
 #### Fixed
-- Banner left-margin gap caused by device camera notch: switched from adaptive full-width to fixed 728×90dp (LEADERBOARD) which centers on screen, avoiding the 161px safe-area inset
+- Banner left-margin gap (camera notch): fixed 728×90dp centers on screen, avoids 161px safe-area inset
+- Jekyll overriding `index.html` on GitHub Pages: added `.nojekyll`
 
 ---
 

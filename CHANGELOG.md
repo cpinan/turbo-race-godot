@@ -8,19 +8,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.2.0] — 2026-07-14
 
 ### Added
-- **AdMob banner ad** (poingstudios/godot-admob-plugin v4.3.1): Leaderboard format (728×90dp), centered at top of screen
+- **AdMob banner ad** (poingstudios/godot-admob-plugin v4.3.1): Leaderboard format (728×90dp), centered at top of screen; hidden during gameplay, shown on HOME/PAUSE/GAME_OVER
+- **Interstitial ad** every 5 games: full-screen ad shown after game-over when `total_games_played % 5 == 0`; reloads immediately after dismissal; fire-and-forget, never blocks gameplay
 - **GDPR/UMP consent flow** — runs before SDK init; falls through gracefully if AdMob console misconfigured
-- **AdManager autoload** — state-driven show/hide: banner hidden during READY/PREPARING, shown on HOME/PAUSE/GAME_OVER; all calls fire-and-forget, never blocks gameplay; Android-only guard ensures headless tests pass
-- **7 AdManager unit tests** verifying graceful degradation on non-Android
+- **AdManager autoload** — state-driven banner show/hide; Android-only guard ensures headless tests pass
+- **133 unit tests** (126 existing + 5 new AdManager interstitial tests + 2 others)
 - **GitHub Pages landing site** (`index.html`) — dark theme, Play Store CTA, feature grid, gameplay stats, tech stack
 - **README**: Play Store badge, site link, Phase 7 migration entry
 
 ### Fixed
 - Banner left-margin gap caused by device camera notch: switched from adaptive full-width to fixed 728×90dp (LEADERBOARD) which centers on screen, avoiding the 161px safe-area inset
+- Jekyll overriding GitHub Pages `index.html`: added `.nojekyll` to serve raw HTML
 
 ### Technical
 - Plugin GDScript classes loaded via `load()` at runtime inside `OS.has_feature("android")` guard — prevents parse errors in headless/CI mode
 - AARs committed to `addons/admob/android/bin/` for reproducible builds (plugin .gitignore patched)
+- Ad unit IDs: banner `ca-app-pub-8297579382369512/5828422617`, interstitial `ca-app-pub-8297579382369512/7768190242`
 
 ---
 
