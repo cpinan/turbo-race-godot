@@ -9,9 +9,13 @@ extends Node
 # inside the Android guard so this file parses cleanly in headless/test mode.
 
 const BANNER_AD_UNIT_ID: String = "ca-app-pub-8297579382369512/5828422617"
+const INTERSTITIAL_AD_UNIT_ID: String = "ca-app-pub-8297579382369512/7768190242"
+const INTERSTITIAL_EVERY_N_GAMES: int = 5
 
 var _ad_view = null
 var _banner_loaded: bool = false
+var _interstitial_ad = null
+var _interstitial_loaded: bool = false
 
 # Loaded dynamically on Android only — null on all other platforms
 var _AdView = null
@@ -25,6 +29,9 @@ var _UMP = null
 var _ConsentInfo = null
 var _ConsentRequestParams = null
 var _ConsentForm = null
+var _InterstitialAdLoader = null
+var _InterstitialAdLoadCallback = null
+var _FullScreenContentCallback = null
 
 func _ready() -> void:
 	if not OS.has_feature("android"):
@@ -45,6 +52,9 @@ func _load_plugin_classes() -> void:
 	_UMP              = load(base + "ump/api/UserMessagingPlatform.gd")
 	_ConsentInfo      = load(base + "ump/api/ConsentInformation.gd")
 	_ConsentRequestParams = load(base + "ump/core/ConsentRequestParameters.gd")
+	_InterstitialAdLoader      = load(base + "api/InterstitialAdLoader.gd")
+	_InterstitialAdLoadCallback = load(base + "api/listeners/InterstitialAdLoadCallback.gd")
+	_FullScreenContentCallback  = load(base + "api/listeners/FullScreenContentCallback.gd")
 
 # ---------------------------------------------------------------------------
 # GDPR / UMP consent — required before loading ads in EU
@@ -94,8 +104,9 @@ func _init_mobile_ads() -> void:
 	_MobileAds.initialize(listener)
 
 func _on_mobile_ads_ready(_status) -> void:
-	print("AdManager: MobileAds initialized — loading banner")
+	print("AdManager: MobileAds initialized — loading banner + interstitial")
 	_load_banner()
+	_load_interstitial()
 
 func _load_banner() -> void:
 	if _ad_view != null:
@@ -122,6 +133,53 @@ func _on_banner_loaded() -> void:
 func _on_banner_failed(error) -> void:
 	print("AdManager: banner failed to load: ", error.message)
 	_banner_loaded = false
+
+# ---------------------------------------------------------------------------
+# Interstitial — shown every INTERSTITIAL_EVERY_N_GAMES games
+# ---------------------------------------------------------------------------
+
+func _load_interstitial() -> void:
+	if _interstitial_ad != null:
+		_interstitial_ad.destroy()
+		_interstitial_ad = null
+	_interstitial_loaded = false
+	var loader = _InterstitialAdLoader.new()
+	var callback = _InterstitialAdLoadCallback.new()
+	callback.on_ad_loaded = _on_interstitial_loaded
+	callback.on_ad_failed_to_load = _on_interstitial_failed
+	loader.load(INTERSTITIAL_AD_UNIT_ID, _AdRequest.new(), callback)
+
+func _on_interstitial_loaded(ad) -> void:
+	_interstitial_ad = ad
+	_interstitial_loaded = true
+	var cb = _FullScreenContentCallback.new()
+	cb.on_ad_dismissed_full_screen_content = _on_interstitial_dismissed
+	cb.on_ad_failed_to_show_full_screen_content = func(_err): _load_interstitial()
+	_interstitial_ad.full_screen_content_callback = cb
+	print("AdManager: interstitial loaded")
+
+func _on_interstitial_failed(error) -> void:
+	print("AdManager: interstitial failed to load: ", error.message)
+	_interstitial_loaded = false
+
+func _on_interstitial_dismissed() -> void:
+	print("AdManager: interstitial dismissed — reloading")
+	_interstitial_ad = null
+	_interstitial_loaded = false
+	_load_interstitial()
+
+func try_show_interstitial() -> void:
+	if not OS.has_feature("android"):
+		return
+	var total: int = SaveManager.get_total_games_played()
+	if total < INTERSTITIAL_EVERY_N_GAMES or total % INTERSTITIAL_EVERY_N_GAMES != 0:
+		return
+	if not _interstitial_loaded or _interstitial_ad == null:
+		print("AdManager: interstitial due (game %d) but not ready" % total)
+		return
+	print("AdManager: showing interstitial (game %d)" % total)
+	_interstitial_loaded = false
+	_interstitial_ad.show()
 
 # ---------------------------------------------------------------------------
 # State-driven show / hide

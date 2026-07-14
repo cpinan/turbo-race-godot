@@ -31,9 +31,28 @@ func test_ad_view_null_on_non_android() -> void:
 		"_ad_view stays null when plugin unavailable")
 
 func test_game_state_change_does_not_crash_without_plugin() -> void:
-	# Simulate what _on_game_state_changed does when called without plugin
 	AdManager._on_game_state_changed(GameManager.GameState.READY)
 	AdManager._on_game_state_changed(GameManager.GameState.PAUSED)
 	AdManager._on_game_state_changed(GameManager.GameState.FINISH)
 	AdManager._on_game_state_changed(GameManager.GameState.END)
 	assert_true(true, "all state transitions are no-ops when plugin unavailable")
+
+func test_interstitial_ad_unit_id_is_production() -> void:
+	assert_eq(AdManager.INTERSTITIAL_AD_UNIT_ID, "ca-app-pub-8297579382369512/7768190242",
+		"Interstitial Ad Unit ID must be production value")
+
+func test_interstitial_every_n_games_constant() -> void:
+	assert_eq(AdManager.INTERSTITIAL_EVERY_N_GAMES, 5,
+		"Interstitial frequency must be every 5 games")
+
+func test_interstitial_not_loaded_on_non_android() -> void:
+	assert_false(AdManager._interstitial_loaded,
+		"_interstitial_loaded stays false when plugin unavailable")
+
+func test_interstitial_ad_null_on_non_android() -> void:
+	assert_null(AdManager._interstitial_ad,
+		"_interstitial_ad stays null when plugin unavailable")
+
+func test_try_show_interstitial_does_not_crash_on_non_android() -> void:
+	AdManager.try_show_interstitial()
+	assert_true(true, "try_show_interstitial() is silent no-op when not on Android")

@@ -106,5 +106,6 @@ func _on_game_over() -> void:
 	SaveManager.record_game_result(score_val, jumped)
 	LeaderboardService.submit_score_for_level(_current_level, score_val)
 	AchievementChecker.check(_current_level, score_val, avoided, used_tilt)
+	AdManager.try_show_interstitial()
 
 	_game_over.show_result(_current_level, score)
