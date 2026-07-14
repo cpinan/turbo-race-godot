@@ -8,6 +8,8 @@ The original C++ source lives at `../Turbo-Race/` (separate repo). It is the beh
 
 [<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">](https://play.google.com/store/apps/details?id=com.carlos.pinan.turborace.godot)
 
+**Site:** [cpinan.github.io/turbo-race-godot](https://cpinan.github.io/turbo-race-godot/)
+
 ---
 
 ## Versions
@@ -452,46 +454,55 @@ The skill covers:
 
 ## Changelog
 
-### Phase 7 — AdMob banner ads (2026-07-14)
+Full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-- `autoload/ad_manager.gd` — new autoload; GDPR/UMP consent flow before SDK init; Leaderboard banner (728×90dp) at top of screen; state-driven: hidden during READY/PREPARING, shown on HOME/PAUSE/GAME_OVER; all calls fire-and-forget, never blocks gameplay; Android-only guard so tests pass in headless
-- `scenes/main/main_controller.gd` — `_show_home()` calls `AdManager.on_home_screen_shown()`; `_on_level_selected()` calls `AdManager.hide_banner()` before game starts
-- `project.godot` — `AdManager` registered as autoload; admob plugin enabled
-- `tests/unit/test_ad_manager.gd` — 7 tests verifying graceful degradation on non-Android
-- **AdMob IDs**: App `ca-app-pub-8297579382369512~9496204888`, Banner unit `ca-app-pub-8297579382369512/5828422617`
-- **Note**: GDPR message must be configured in AdMob console (Privacy & messaging) before EU release; fallthrough to ad load on consent error is intentional
+### [1.2.0] — 2026-07-14
 
-### Phase 5 — Google Play Games Services (2026-07-13)
+#### Added
+- **AdMob banner ad** (poingstudios/godot-admob-plugin v4.3.1): Leaderboard format (728×90dp), centered at top of screen
+- **GDPR/UMP consent flow** — runs before SDK init; falls through gracefully if AdMob console misconfigured
+- **AdManager autoload** — state-driven show/hide: banner hidden during READY/PREPARING, shown on HOME/PAUSE/GAME_OVER; all calls fire-and-forget, never blocks gameplay; Android-only guard ensures headless tests pass
+- **7 AdManager unit tests** verifying graceful degradation on non-Android
+- **GitHub Pages landing site** (`index.html`) — dark theme, Play Store CTA, feature grid, gameplay stats, tech stack
+- **README**: Play Store badge, site link, Phase 7 migration entry
 
-**Leaderboard & achievements:**
-- `autoload/achievement_checker.gd` — new autoload; ports all 20 achievement rules from `GameLayer::_checkAchievements()` exactly; local-first guard via `SaveManager` prevents duplicate GPGS calls
-- `autoload/leaderboard_service.gd` — rewritten; uses `Engine.get_singleton("GodotPlayGameServices")` directly (native Kotlin plugin, Android-only); adds `show_achievements()`, `show_all_leaderboards()`, `show_leaderboard_for_level()`; sign-in loop guard via `_signing_in` flag
-- `autoload/save_manager.gd` — added cumulative stats (`total_games_played`, `total_score`, `total_obstacles_jumped`) and local achievement unlock state; mirrors `LocalStorageManager` from C++
-- `scenes/main/main_controller.gd` — `_on_game_over()` now calls `SaveManager.record_game_result()`, `LeaderboardService.submit_score_for_level()`, `AchievementChecker.check()` after every run
-- `android/build/res/values/game_ids.xml` — set `game_services_project_id` to `893066960841` (was placeholder)
-- `project.godot` — `AchievementChecker` registered as autoload
+#### Fixed
+- Banner left-margin gap caused by device camera notch: switched from adaptive full-width to fixed 728×90dp (LEADERBOARD) which centers on screen, avoiding the 161px safe-area inset
 
-**Home screen UI (Android):**
-- Added `BtnAchievements` and `BtnLeaderboard` buttons next to sound button (bottom-left area)
-- `BtnSettings` moved to bottom-right corner next to "How to Play"
-- All three buttons Android-only (require GPGS)
+---
 
-**Sign-in fix:**
-- Fixed infinite sign-in loop: `_signing_in` guard prevents re-entrant `signIn()` calls
-- Added debug logging (`print`) for sign-in flow — readable via `adb logcat -s godot:D`
-- Root cause of initial failure: debug APK uses Godot's default certificate, not the release keystore; both SHA-1 fingerprints now registered in Play Console
+### [1.1.0] — 2026-07-13
 
-### Accelerometer tilt control (2026-07-13)
+#### Added
+- **Google Play Games Services** (GodotPlayGameServices v3.2.0): sign-in, leaderboard submit, achievement unlock
+- **20 achievements** ported from `GameLayer::_checkAchievements()` — exact C++ rule table, same thresholds
+- **3 leaderboards** (Easy / Normal / Hard) — score submitted every game-over
+- **Achievements + leaderboard buttons** on HomeScreen (Android-only, bottom-left)
+- **Settings button** (Android-only, bottom-right) — joystick vs tilt control selector
+- **Accelerometer tilt control** — calibrated dead-zone, dual-axis mapping, toggle persisted in SaveManager
+- **AchievementChecker autoload** — 20-rule engine, local dedup + GPGS submission with sign-in guard
+- **Cumulative stats** in SaveManager: total games, total score, total jumps, average score
+- **Levels expanded 5×**: easy/normal/hard each 665 entries (was 133), difficulty-tuned obstacle mix
 
-- `accel.y` → vertical movement (top/bottom tilt in landscape); `accel.x` → horizontal (left/right tilt)
-- Calibrated at game start via `_calibrate_tilt()`; dead zone 1.5 m/s², full speed at 5.0 m/s²; X axis 2× speed multiplier
-- Settings gear (Android) on home screen — joystick vs tilt selector, persisted via `SaveManager`
-- Debug overlay shows live accel values when tilt mode active and `debug_collision = true`
+#### Fixed
+- GPGS sign-in infinite loop: `_signing_in` bool guard prevents re-entrant `signIn()` calls
+- Achievement lost when GPGS unavailable: local unlock mark only written when `is_signed_in() == true`
+- App ID placeholder in `game_ids.xml` replaced with correct numeric project ID
 
-### Level expansion (2026-07-13)
+---
 
-- Easy / Normal / Hard levels expanded from 133 → 665 entries each (5× longer)
-- Difficulty-adapted obstacle mix per level
+### [1.0.0] — 2026-07-08
+
+#### Added
+- Full gameplay parity with Cocos2d-x original: vehicle movement, jump arc, obstacle collision, scoring
+- Three difficulty levels (Easy / Normal / Hard) loaded from JSON
+- All three obstacle types: SingleObstacle, DoubleObstacle, AirDoubleObstacle
+- VehicleFrog with idle animation, jump arc (140-unit peak / 0.6 s sine arc), death blink
+- HomeScreen, HUD, PauseScreen, GameOverScreen, tutorial overlay, settings overlay
+- Music rotation (3 tracks), SFX, mute — persisted via SaveManager
+- Best score per level persisted; virtual joystick + right-half tap-to-jump
+- Android adaptive icon, edge-to-edge display, cutout mode
+- 110 unit + regression tests via GUT, CI on every push
 
 ---
 
