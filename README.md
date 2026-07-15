@@ -354,9 +354,7 @@ GPGS is integrated via [GodotPlayGameServices v3.2.0](https://github.com/Iakobs/
 ### Play Console requirements for sign-in to work
 
 1. **App ID** registered in Play Games Services configuration (already done — `893066960841`)
-2. **OAuth credential** with correct SHA-1 fingerprint for the signing certificate:
-   - Release builds: `6B:A5:95:1A:CB:EE:71:CF:3A:7F:35:14:0A:E0:07:E0:94:83:06:98`
-   - Debug builds (Godot default cert): `D8:C1:21:41:1E:46:92:2C:5D:6E:2F:7B:B8:15:BC:2A:AE:ED:B4:15`
+2. **OAuth credential** 
 3. **Game configuration published** (even in Draft, must be published for testers to sign in)
 4. **Tester email added** in Play Games Services → Setup and management → Testers
 
