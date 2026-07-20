@@ -84,3 +84,14 @@ func is_achievement_unlocked(id: String) -> bool:
 func mark_achievement_unlocked(id: String) -> void:
 	_cfg.set_value("achievements", id, true)
 	_cfg.save(SAVE_PATH)
+
+# ---------------------------------------------------------------------------
+# In-app review — prompt at most once ever (ReviewService gates on this flag)
+# ---------------------------------------------------------------------------
+
+func was_review_prompted() -> bool:
+	return _cfg.get_value("stats", "review_prompted", false)
+
+func mark_review_prompted() -> void:
+	_cfg.set_value("stats", "review_prompted", true)
+	_cfg.save(SAVE_PATH)

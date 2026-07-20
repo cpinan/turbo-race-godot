@@ -14,3 +14,6 @@ export/
 # Android build output
 bin/
 export_presets.cfg
+
+# Local build output (web export lives in play/ for Pages; zip is a dev convenience)
+builds/

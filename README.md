@@ -2,6 +2,10 @@
 
 Full rewrite of the original **Turbo Race** endless-runner mobile game from Cocos2d-x/C++ into **Godot 4.7 + GDScript**.
 
+<p align="center">
+  <img src="docs/assets/turbo_race_gameplay.gif" alt="Turbo Race gameplay" width="640">
+</p>
+
 **Goal: behavioral parity.** Same jump physics, same collision rules, same scoring, same obstacle types. No new mechanics.
 
 The original C++ source lives at `../Turbo-Race/` (separate repo). It is the behavioral reference — never modified.

@@ -28,6 +28,7 @@ LevelLoader="*res://autoload/level_loader.gd"
 LeaderboardService="*res://autoload/leaderboard_service.gd"
 AchievementChecker="*res://autoload/achievement_checker.gd"
 AdManager="*res://autoload/ad_manager.gd"
+ReviewService="*res://autoload/review_service.gd"
 GodotPlayGameServices="*uid://br5jdflguv57u"
 
 [display]
@@ -39,7 +40,7 @@ window/stretch/aspect="ignore"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/GodotPlayGameServices/plugin.cfg", "res://addons/admob/plugin.cfg")
+enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/GodotPlayGameServices/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/InappReviewPlugin/plugin.cfg")
 
 [input_devices]
 
