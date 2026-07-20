@@ -344,6 +344,17 @@ func _physics_process(delta: float) -> void:
 		elif _joy_active and (_joy_norm_x != 0.0 or _joy_norm_y != 0.0):
 			var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
 			_player.do_move(Vector2(_joy_norm_x * spd, _joy_norm_y * spd), WIN_W)
+		else:
+			# Keyboard fallback for web/desktop — arrows or WASD move, Space jumps (jump in _unhandled_input).
+			var key_x: float = 0.0
+			var key_y: float = 0.0
+			if Input.is_key_pressed(KEY_LEFT)  or Input.is_key_pressed(KEY_A): key_x -= 1.0
+			if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D): key_x += 1.0
+			if Input.is_key_pressed(KEY_UP)    or Input.is_key_pressed(KEY_W): key_y += 1.0
+			if Input.is_key_pressed(KEY_DOWN)  or Input.is_key_pressed(KEY_S): key_y -= 1.0
+			if key_x != 0.0 or key_y != 0.0:
+				var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
+				_player.do_move(Vector2(key_x * spd, key_y * spd), WIN_W)
 
 	# Dynamic z_index — mirrors C++ reorderChild(_player, z) in _updatePlayer.
 	# Formula: (WIN_H - (playerY + height*0.75)) / 10  ≈ 45 at center lane.
@@ -453,7 +464,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			if absf(dy) < JOY_DEAD_ZONE: _joy_norm_y = 0.0
 
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		var left_half: bool = event.position.x < WIN_W * 0.5
+		# Joystick-by-drag is a touch-control stand-in; on web/desktop keyboard
+		# covers movement, so left-half clicks jump too instead of driving a
+		# joystick with no visible thumb.
+		var left_half: bool = event.position.x < WIN_W * 0.5 and OS.has_feature("android")
 		if left_half and not tilt_mode:
 			if event.pressed:
 				_joy_active   = true
@@ -476,6 +490,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_joy_norm_y = clampf(-dy / JOY_MAX_DIST, -1.0, 1.0)
 		if absf(dx) < JOY_DEAD_ZONE: _joy_norm_x = 0.0
 		if absf(dy) < JOY_DEAD_ZONE: _joy_norm_y = 0.0
+
+	elif event is InputEventKey:
+		if event.keycode == KEY_SPACE and event.pressed and not event.echo and _player:
+			_player.do_jump()
 
 # ---------------------------------------------------------------------------
 # Pause / resume

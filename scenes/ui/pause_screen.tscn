@@ -32,6 +32,7 @@ offset_left = 80.0
 offset_top = 288.0
 offset_right = 200.0
 offset_bottom = 378.0
+focus_mode = 0
 texture_normal = ExtResource("3")
 texture_pressed = ExtResource("4")
 
@@ -40,6 +41,7 @@ offset_left = 212.0
 offset_top = 274.0
 offset_right = 332.0
 offset_bottom = 364.0
+focus_mode = 0
 texture_normal = ExtResource("5")
 texture_pressed = ExtResource("6")
 
@@ -48,5 +50,6 @@ offset_left = 344.0
 offset_top = 274.0
 offset_right = 464.0
 offset_bottom = 364.0
+focus_mode = 0
 texture_normal = ExtResource("7")
 texture_pressed = ExtResource("8")

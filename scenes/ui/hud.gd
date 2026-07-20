@@ -35,8 +35,9 @@ func _on_score_changed(_total: int) -> void:
 func show_hud() -> void:
 	visible = true
 	if _joy_bg:
+		# Joystick is a mobile touch control; web/desktop use keyboard instead.
 		var tilt_mode: bool = OS.has_feature("android") and SaveManager.get_control_type() == "tilt"
-		_joy_bg.visible = not tilt_mode
+		_joy_bg.visible = OS.has_feature("android") and not tilt_mode
 	_reset_thumb()
 
 func hide_hud() -> void:

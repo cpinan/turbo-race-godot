@@ -11,6 +11,7 @@ signal how_to_play_pressed
 const HIDE_TIME: float = 0.4
 
 var _disabled: bool = false
+var _is_mobile: bool = false
 
 @onready var _logo:            TextureRect   = $Logo
 @onready var _tablero:         TextureRect   = $Tablero
@@ -48,11 +49,13 @@ func _ready() -> void:
 	_btn_how_to_play.pressed.connect(_on_how_to_play)
 
 	# Achievements, leaderboard, settings gear — Android only (all require GPGS)
-	var is_mobile: bool = OS.has_feature("android")
-	_btn_settings.visible     = is_mobile
-	_btn_achievements.visible = is_mobile
-	_btn_leaderboard.visible  = is_mobile
-	if is_mobile:
+	_is_mobile = OS.has_feature("android")
+	_btn_settings.visible     = _is_mobile
+	_btn_achievements.visible = _is_mobile
+	_btn_leaderboard.visible  = _is_mobile
+	# How-to-play explains touch controls; web/desktop use keyboard, hide it there.
+	_btn_how_to_play.visible = _is_mobile
+	if _is_mobile:
 		_btn_settings.pressed.connect(_on_settings)
 		_btn_joystick.pressed.connect(func(): _set_control("joystick"))
 		_btn_tilt.pressed.connect(func(): _set_control("tilt"))
@@ -70,10 +73,11 @@ func _start_button_animations() -> void:
 	_pulse_button(_btn_normal, 1.3)
 	_pulse_button(_btn_hard,   2.6)
 
-	# "How to Play" wobbles — pivot set in .tscn
-	var htw := create_tween().set_loops()
-	htw.tween_property(_btn_how_to_play, "rotation_degrees", -2.0, 0.5)
-	htw.tween_property(_btn_how_to_play, "rotation_degrees",  2.0, 0.5)
+	# "How to Play" wobbles — pivot set in .tscn (mobile only, see _ready)
+	if _is_mobile:
+		var htw := create_tween().set_loops()
+		htw.tween_property(_btn_how_to_play, "rotation_degrees", -2.0, 0.5)
+		htw.tween_property(_btn_how_to_play, "rotation_degrees",  2.0, 0.5)
 
 func _pulse_button(btn: TextureButton, delay: float) -> void:
 	var tw := create_tween().set_loops()
@@ -162,7 +166,9 @@ func _animate_hide() -> void:
 	tween.set_parallel(true)
 	var off_left  := Vector2(-1024.0 * 0.8, 0.0)
 	var off_right := Vector2( 1024.0 * 0.8, 0.0)
-	var left_nodes: Array = [_tablero, _btn_easy, _btn_normal, _btn_hard, _btn_sound, _btn_how_to_play]
+	var left_nodes: Array = [_tablero, _btn_easy, _btn_normal, _btn_hard, _btn_sound]
+	if _btn_how_to_play.visible:
+		left_nodes.append(_btn_how_to_play)
 	if _btn_settings.visible:
 		left_nodes.append(_btn_settings)
 	if _btn_achievements.visible:
