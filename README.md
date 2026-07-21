@@ -473,6 +473,20 @@ Full changelog: [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
+### Web demo & desktop controls — 2026-07-20
+
+Site-only changes, no app version bump.
+
+#### Added
+- **Playable browser demo**, self-hosted at [cpinan.github.io/turbo-race-godot/#play](https://cpinan.github.io/turbo-race-godot/#play) — no itch.io dependency, embedded directly on the landing page
+- **Keyboard controls** for the web/desktop build: WASD/arrow keys to move, Space to jump, alongside the existing touch/tilt/joystick input
+
+#### Fixed
+- On-screen joystick and the "How to Play" button no longer appear on non-Android builds (keyboard covers both); a left-click now jumps instead of driving a hidden joystick
+- Game-over/pause buttons showing a stuck focus highlight after returning to the menu — the screens are hidden/shown, not freed, so Godot's default focus outline never cleared
+
+---
+
 ### [1.1.0] — 2026-07-13
 
 #### Added
