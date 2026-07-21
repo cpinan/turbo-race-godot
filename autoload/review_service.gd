@@ -13,9 +13,12 @@ extends Node
 #      always one tap away, including when the native singleton isn't present
 #      (desktop/editor, or a debug build without Play services).
 #
-# Trigger policy: exactly once, ever, when total_games_played == REVIEW_AT_GAME.
-# Game 3 never coincides with the interstitial (every 5th game), so the two
-# never stack.
+# Trigger policy: exactly once, ever, the first game-over on or after
+# total_games_played reaches REVIEW_AT_GAME — not just an exact match, so
+# players who already had 3+ games logged before this feature shipped (or any
+# save-state edge case) still get prompted once, instead of the gate closing
+# forever. Game 3 never coincides with the interstitial (every 5th game), so
+# the two never stack for a player who hits the gate exactly on schedule.
 
 const REVIEW_AT_GAME: int = 3
 const PACKAGE_NAME: String = "com.carlos.pinan.turborace.godot"
@@ -58,7 +61,7 @@ func maybe_request_review() -> void:
 		return
 	if SaveManager.was_review_prompted():
 		return
-	if SaveManager.get_total_games_played() != REVIEW_AT_GAME:
+	if SaveManager.get_total_games_played() < REVIEW_AT_GAME:
 		return
 	SaveManager.mark_review_prompted()
 	_launch_review()
