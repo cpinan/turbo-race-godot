@@ -149,3 +149,19 @@ No C++ symbols ported this phase. Folder structure, GUT, and CI established.
 - `GooglePlayGames::showLeaderboard()` → `_plugin.showLeaderboard(id)` / `showAllLeaderboards()`
 - Sign-in: `_plugin.signIn()` → `userAuthenticated(ok: bool)` signal
 - `Engine.get_singleton("GodotPlayGameServices")` used directly (not GDScript wrapper autoload) to avoid double-init guard in wrapper
+
+---
+
+## Android Play Console follow-ups (out of scope, flagged not built)
+
+### Large-screen resizability / orientation restriction warning (2026-07-24)
+- Play Console flags `android:resizeableActivity="false"` + `android:screenOrientation="landscape"` in `android/build/src/main/AndroidManifest.xml` (Godot stock template, driven by project's default landscape orientation).
+- **Not fixed.** `project.godot` sets `window/stretch/aspect="ignore"` — flipping `resizeableActivity` to `true` without a matching `aspect="keep"` change + UI anchor audit would visually distort the game on resize/multi-window/tablets, not just letterbox it. Real fix is a scoped responsive-UI pass, not a manifest toggle.
+- Confirmed via Google's own guidance: on Android 16 both flags are ignored outright by the OS regardless of manifest value (app stretches/rotates either way) — warning is informational, does not block publishing.
+- Landscape lock itself is intentional (endless runner), keep as-is.
+
+### R8 optimization warning (2026-07-24)
+- Play Console recommends `minifyEnabled` for release builds. **Not enabled.**
+- `android/build/build.gradle` has no `proguardFiles` / `proguard-rules.pro`. Checked every dependency for consumer keep-rules R8 could rely on: `admob-core`/`admob-ads` AAR `proguard.txt` files present but empty; `godot-lib.template_release.aar` (engine itself) ships no consumer proguard rules at all; GPGS and InappReview AARs have none either.
+- Risk: Godot's C++ calls into Java via JNI by class/method name — invisible to R8's reachability analysis. `GodotPlayGameServices` uses `Engine.get_singleton()` and AdMob uses dynamic `load()` (see [[feedback_gpgs_integration]], [[feedback_admob_integration]]) — both reflection-by-string lookups, another blind spot. Enabling R8 with zero keep-rules on a live monetized app risks a silent prod crash (ad load, GPGS sign-in, or core engine call) that only surfaces on real devices.
+- Not blocking (technical-quality recommendation only). Revisit as scoped work: write full `proguard-rules.pro` covering `org.godotengine.godot.**`, GPGS/AdMob/InappReview plugin classes, then real-device QA pass (ads, GPGS sign-in, achievements, core gameplay) before shipping.
