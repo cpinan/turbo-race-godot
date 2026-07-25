@@ -5,6 +5,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.3.0] — 2026-07-25
+
+### Added
+- **In-app review prompt** (Google Play Core Review API via `ReviewService` autoload + `InappReviewPlugin`/`GMPShared` addons): shown once-ever, gated to the first game-over on or after the 3rd completed game
+- **Playable web demo** hosted on GitHub Pages (`play/`, Godot 4.7.1 web export, no-threads), embedded on the landing page + "Play in browser" CTA — self-hosted, no itch.io dependency
+- **Keyboard controls** (WASD/arrows + Space) for web/desktop builds; on-screen joystick and how-to-play button hidden on non-Android where keyboard covers both
+
+### Fixed
+- In-app review gate used an exact-match check (`!= 3`) instead of a threshold (`< 3`) — a player already past game 3 at release would never be prompted; now opens on the first eligible game-over
+- Game-over/pause buttons showed a stuck focus highlight after returning to the menu (screens are hidden not freed, so Godot's focus outline never cleared) — fixed via `focus_mode=0`
+- Android target API bumped 35→36 (Android 16) — required by Google Play policy; apps not within 1 year of the latest Android release lose update ability after Aug 30, 2026
+
+### Technical
+- `com.google.android.gms:play-services-ads` bumped 24.9.0→25.0.0 — mitigates a Play Console "deprecated edge-to-edge API" warning traced to Google's own UMP consent SDK
+- Privacy policy updated to disclose AdMob/GPGS data collection; `app-ads.txt` added for AdMob authorized-seller verification
+- Local Android build template synced to 4.7.1.stable to match engine version
+- Play Console's resizability/orientation and R8-minification recommendations evaluated and deliberately deferred — both carry real regression risk for non-blocking warnings; findings in `docs/MIGRATION_NOTES.md`
+
+---
+
 ## [1.2.0] — 2026-07-14
 
 ### Added
