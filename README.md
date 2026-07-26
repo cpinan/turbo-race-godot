@@ -23,9 +23,9 @@ The original C++ source lives at `../Turbo-Race/` (separate repo). It is the beh
 | Godot Engine | 4.7.stable |
 | GUT (test framework) | 9.7.0 |
 | Android min SDK | 24 (Android 7.0) |
-| Android target SDK | 35 (Android 15) |
-| App version name | 1.2.0 |
-| App version code | 6 |
+| Android target SDK | 36 (Android 16) |
+| App version name | 1.3.0 |
+| App version code | 7 |
 | Package | `com.carlos.pinan.turborace.godot` |
 | GDScript | Static-typed throughout |
 
@@ -57,7 +57,7 @@ godot --headless --path . \
 ```
 
 CI runs this on every push via `.github/workflows/tests.yml`.
-Current status: **128 tests, 128 passing.**
+Current status: **146 tests, 146 passing.**
 
 ---
 
@@ -426,9 +426,13 @@ standardRelease/processStandardReleaseManifest/AndroidManifest.xml
 
 ---
 
-## Claude Code skill
+## Claude Code skills
 
-This repo ships a [Claude Code](https://claude.ai/code) skill that captures every non-obvious decision made during the migration. If you're porting a different Cocos2d-x game to Godot 4, you can reuse it directly.
+This repo ships two [Claude Code](https://claude.ai/code) skills that capture non-obvious decisions made during the migration and the ongoing Android release process. Both are self-contained — copy the whole skill folder into another project's `.claude/skills/` to reuse.
+
+### `cocos2dx-to-godot`
+
+For porting a different Cocos2d-x game to Godot 4.
 
 **How to use:**
 
@@ -448,9 +452,23 @@ The skill covers:
 - Cocos2d-x center-anchor UI → Godot Label rect conversion
 - Dynamic Label positioning: `await process_frame` + `get_minimum_size()` formula
 - Debug collision overlay: child Node2D z_index=1000, not parent `_draw()`
-- Android Play Store release: AAB build, symbols zip, version code verification
 - Parallax scroll, obstacle pooling, scoring, world speed constants
 - Parity verification checklist
+
+### `godot-android-release`
+
+For building and releasing *any* Godot 4 Android app — not specific to this game.
+
+**How to use:**
+
+1. Copy `.claude/skills/godot-android-release/` (the whole folder — it bundles runnable scripts, not just docs) into your own project's `.claude/skills/`
+2. Open the project in Claude Code
+3. Invoke with `/godot-android-release`, or just ask to build a release/debug build — the bundled scripts work via env vars, no project-specific edits needed
+
+Includes:
+
+- **Scripts** (`scripts/`): bump version across all export presets, build signed release AAB, build+install debug APK on a connected device, verify the versionCode/versionName actually baked into a build, package the native debug-symbols zip with the exact structure Play Console requires
+- **Reference docs** (`references/`): Play Console submission practices and which warnings are safe to ignore; AdMob integration gotchas (headless-CI-safe loading pattern, banner sizing, UMP consent errors); Google Play Games Services gotchas (sign-in loops, cert registration, publishing requirements); Android build template/manifest pitfalls; the `class_name`-addon-vs-headless-CI parse trap that applies to any native-binding plugin
 
 ---
 
