@@ -5,6 +5,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **Obstacles could spawn invisible and harmless**: once a pool ran past its prefill count, `ObstaclePool.acquire()` returned an un-parented node, so `_ready()` never ran — the obstacle rendered nothing, could never collide, still awarded score, and poisoned the pool for the rest of the session. Reachable on every level (normal mode overran two pools by ~2x). Growth-path instances are now parented; prefills raised to 16/16/16
+- **Player hitbox was 38% smaller than the original**: 1.0.0 shipped "tuned" collision rects (`w*0.355 / w*0.34`) against the C++ and `SPEC.md` values of `w*0.30 / w*0.55`, widening jump-timing slack by ~21%. Restored; the four unit tests that had been rewritten to assert the tuned values are re-derived from spec
+- **Lane changes made mid-jump were reverted on landing**, and while airborne the air and ground hitboxes tracked different lanes. The jump arc now rides the live `player_y` each frame, matching Cocos2d-x `JumpBy`'s additive behaviour
+- **Hard mode ran with 4 obstacle groups in flight instead of 10**: initial spawn counted obstacles where `GameLayer::_initElements` counts groups
+- **Playfield was 9 units short at the top lane** (`[201, 282]` instead of `[210, 300]`): `compute_y_limits()` was fed pre-adjusted lane values, applying its transform twice
+- **Player rested 4 units below the intended floor** until first input: `do_move()` was skipped on neutral input, but its zero-velocity path is what clamps `player_y` into range
+- **Jump arc was a sine, not a parabola**: Cocos2d-x `JumpBy::update` is `height * 4 * frac * (1 - frac)` (verified against the cocos2d-x-4.0 engine source). Sine and parabola agree at t = 0, 0.5 and 1 — exactly the points the old tests checked — and differ everywhere between (0.7071 vs 0.75 of peak at t = 0.25)
+- **Depth ordering was quantised to 10px buckets**: the player tied with bottom-lane walls and rendered in front of ground obstacles it was colliding with. Restored to the C++ `int(WIN_H - z_param)` at 1px granularity; background layers now carry explicit z values, and player depth is set at spawn/restart rather than only from the first physics tick
+
+### Added
+- **Ground shadows**, ported from C++ and previously missing entirely (both assets were imported but referenced nowhere). The player shadow marks `player_y` — the value the ground hitbox and `SingleObstacle`'s lane-band test both use — so the player can now see which lane they occupy while airborne. The air-obstacle shadow drifts at 2x world speed, the fake-perspective cue that distinguishes a floating obstacle from a ground one
+- Mid-air death fall from `BaseVehicle::dead()`
+- `tests/regression/test_collision_parity_fixes.gd` — 11 tests, each failing against 1.3.0 behaviour
+- `tests/regression/test_spec_constants_match_code.gd` — reads `docs/SPEC.md` at runtime and fails if the document and the physics layer disagree on collision-rect fractions, jump constants, arc shape, map lengths or level multipliers. Both the hitbox regression and the level-map redesign survived three releases because the tests were rewritten to match the drifted code; editing one without the other is now a build failure (166 tests total)
+
+### Changed
+- **Level maps restored to the C++ originals** (665 → 133 entries for easy/normal/hard; story was already identical). The 1.1.0 "difficulty-tuned" maps were a redesign that pushed easy's first must-jump obstacle from 25s to 142s into a run and dropped type-2 obstacles from hard mode entirely. Speed/distance/acceleration multipliers were already identical and are unchanged
+- Obstacle pool prefills re-sized for the restored maps: 24 single / 18 ground / 18 air
+
+### Known issues
+- At 133 entries the map loops roughly every 133 obstacles — sooner than the 665-entry redesign did. Matches the original; a longer-form variant is a possible future milestone
+- Tilt control remains a redesign of the C++ accelerometer curve, so tilt and joystick players sit on different difficulty curves while sharing leaderboards
+
+---
+
 ## [1.3.0] — 2026-07-25
 
 ### Added

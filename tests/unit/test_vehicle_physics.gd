@@ -41,6 +41,16 @@ func test_jump_arc_symmetric() -> void:
 	var b: float = VehiclePhysics.jump_arc_offset(0.75)
 	assert_almost_eq(a, b, 0.001, "arc symmetric around t=0.5")
 
+func test_jump_arc_is_parabola_not_sine() -> void:
+	# JumpBy::update — `_height * 4 * frac * (1 - frac)` with _jumps = 1.
+	# At t=0.25 the parabola gives 0.75 of peak; a sine would give 0.7071.
+	assert_almost_eq(VehiclePhysics.jump_arc_offset(0.25),
+		VehiclePhysics.MAX_PLAYER_JUMP * 0.75, 0.001,
+		"t=0.25 → 4*0.25*0.75 = 0.75 of peak (parabola, not sin(PI*t))")
+	assert_almost_eq(VehiclePhysics.jump_arc_offset(0.1),
+		VehiclePhysics.MAX_PLAYER_JUMP * 4.0 * 0.1 * 0.9, 0.001,
+		"t=0.1 → 4*0.1*0.9 = 0.36 of peak")
+
 func test_jump_arc_max_constant() -> void:
 	assert_almost_eq(VehiclePhysics.MAX_PLAYER_JUMP, 140.0, 0.001,
 		"MAX_PLAYER_JUMP = 140")
@@ -62,10 +72,11 @@ func test_airborne_height_at_peak() -> void:
 # --- ground_collision_rect ---
 
 func test_ground_rect_x_position() -> void:
-	# pos_x=200, content_w=60 → bbox_min_x = 200 - 30 = 170; rect.x = 170 + 60*0.355 = 191.3
+	# BaseVehicle::getGroundCollision — x = bbox.minX + contentSize.width * 0.30
+	# pos_x=200, content_w=60 → bbox_min_x = 200 - 30 = 170; rect.x = 170 + 18 = 188
 	var r: Rect2 = VehiclePhysics.ground_collision_rect(200.0, 50.0, 60.0, 40.0)
-	assert_almost_eq(r.position.x, 200.0 - 60.0 * 0.5 + 60.0 * 0.355, 0.001,
-		"ground rect x = bbox_min_x + w*0.355")
+	assert_almost_eq(r.position.x, 200.0 - 60.0 * 0.5 + 60.0 * 0.30, 0.001,
+		"ground rect x = bbox_min_x + w*0.30")
 
 func test_ground_rect_y_is_player_y() -> void:
 	var r: Rect2 = VehiclePhysics.ground_collision_rect(200.0, 50.0, 60.0, 40.0)
@@ -73,7 +84,7 @@ func test_ground_rect_y_is_player_y() -> void:
 
 func test_ground_rect_width() -> void:
 	var r: Rect2 = VehiclePhysics.ground_collision_rect(200.0, 50.0, 60.0, 40.0)
-	assert_almost_eq(r.size.x, 60.0 * 0.34, 0.001, "ground rect width = content_w * 0.34")
+	assert_almost_eq(r.size.x, 60.0 * 0.55, 0.001, "ground rect width = content_w * 0.55")
 
 func test_ground_rect_height() -> void:
 	var r: Rect2 = VehiclePhysics.ground_collision_rect(200.0, 50.0, 60.0, 40.0)
@@ -86,6 +97,10 @@ func test_air_rect_x_same_as_ground() -> void:
 	var ra: Rect2 = VehiclePhysics.air_collision_rect(200.0, 80.0, 60.0, 40.0)
 	assert_almost_eq(ra.position.x, rg.position.x, 0.001,
 		"air rect x = ground rect x (same horizontal offset)")
+
+func test_air_rect_width() -> void:
+	var r: Rect2 = VehiclePhysics.air_collision_rect(200.0, 80.0, 60.0, 40.0)
+	assert_almost_eq(r.size.x, 60.0 * 0.55, 0.001, "air rect width = content_w * 0.55")
 
 func test_air_rect_height_uses_width() -> void:
 	# height field = content_w * 0.2, NOT content_h * 0.2

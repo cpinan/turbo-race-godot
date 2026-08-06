@@ -6,10 +6,17 @@ extends Node2D
 
 signal entrance_done
 
-const PREFILL_SINGLE: int = 12   # easy.json starts with 10 consecutive singles
-const PREFILL_DOUBLE: int = 6
-const PREFILL_AIR:    int = 6
-const MAX_OBSTACLES:  int = 10
+# Prefill must cover the worst-case concurrent count for MAX_OBSTACLE_GROUPS
+# consecutive map entries on any level. Measured peaks across easy/normal/hard/
+# story: single 20, ground 14, air 13. Sized with margin so acquire() never has
+# to take its growth path mid-run.
+const PREFILL_SINGLE: int = 24
+const PREFILL_DOUBLE: int = 18
+const PREFILL_AIR:    int = 18
+
+# Source: GameLayer::_initElements — spawns exactly MAX_OBSTACLES *groups*,
+# not obstacles. A group is 1-3 obstacles depending on map entry.
+const MAX_OBSTACLE_GROUPS: int = 10
 
 const SPEED_FLOOR:    float = 1.0
 const SPEED_OBSTACLE: float = 1.0
@@ -25,6 +32,35 @@ const COLOR_MAX:        float = 255.0
 const WIN_W:   float = 1024.0
 const WIN_H:   float = 768.0
 const TRACK_H: float = 400.0   # pista.png height
+
+# Z-order — mirrors the GameDeep enum in GameLayer.hpp.
+#
+# C++ spawns with `addChild(node, int(WIN_H - z_param) + toZ(GameDeep::X))`.
+# The raw GameDeep values (-9999 … -2500) fall outside Godot's z_index range of
+# ±4096, so the background constants below are rescaled — only their ordering
+# matters, and nothing is interleaved between them.
+#
+# Game elements keep the C++ formula exactly, minus the constant GameElements
+# base: `z_index = int(WIN_H - z_param)`, which lands in 372…768. That is 1px
+# depth granularity, matching C++. 1.0.0 divided by 10, collapsing the whole
+# range into ~8 buckets — the player tied with bottom-lane walls (both 46) and
+# rendered *behind* ground obstacles it was colliding with at the top of its
+# lane range.
+const Z_SKY:      int = -600
+const Z_CLOUD:    int = -590
+const Z_BG_BACK:  int = -580
+const Z_BG_MID:   int = -570
+const Z_BG_FRONT: int = -560
+const Z_TRACKS:   int = -550
+const Z_DEBUG:    int = 1000   # above every game element (max 768)
+
+# Press to toggle the collision overlay at runtime — the exported flag alone
+# needs an editor round-trip, which is useless while play-testing.
+const DEBUG_TOGGLE_KEY: Key = KEY_F1
+
+# z_param per lane, from GameLayer::_spawnObstacleGroup's switch on LanePos.
+const Z_PARAM_DOUBLE_AIR:    float = 0.0
+const Z_PARAM_DOUBLE_GROUND: float = WIN_H * 0.5
 
 # Joystick constants — mirrors HudLayer joypad velocity behaviour.
 const JOY_DEAD_ZONE: float  = 20.0   # screen pixels before registering input
@@ -95,25 +131,41 @@ func _ready() -> void:
 	setup(_lane, "easy")
 	GameManager.set_state(GameManager.GameState.READY)
 	if debug_collision:
-		var overlay_script: Script = load("res://scripts/debug_collision_overlay.gd")
-		_debug_overlay = Node2D.new()
-		_debug_overlay.set_script(overlay_script)
-		_debug_overlay.z_index = 1000
-		add_child(_debug_overlay)
-		(_debug_overlay as Node2D).set("game_scene", self)
+		_ensure_debug_overlay()
+
+# The overlay is also reachable at runtime via DEBUG_TOGGLE_KEY, so it is built
+# lazily rather than only from _ready().
+func _ensure_debug_overlay() -> void:
+	if _debug_overlay != null:
+		return
+	var overlay_script: Script = load("res://scripts/debug_collision_overlay.gd")
+	_debug_overlay = Node2D.new()
+	_debug_overlay.set_script(overlay_script)
+	_debug_overlay.z_index = Z_DEBUG
+	add_child(_debug_overlay)
+	(_debug_overlay as Node2D).set("game_scene", self)
+
+func toggle_debug_collision() -> void:
+	debug_collision = not debug_collision
+	if debug_collision:
+		_ensure_debug_overlay()
+	if _debug_overlay != null:
+		_debug_overlay.visible = debug_collision
+		_debug_overlay.queue_redraw()
+	print("[DEBUG] collision overlay ", "ON" if debug_collision else "OFF")
 
 func _create_background() -> void:
 	# Background layers in back-to-front draw order.
 	# Non-centered sprites: position.y = Cocos2d anchor(0,0) y + texture height (Y-up).
 	# Each Sprite2D has scale=(1,-1) to counter the root Y-flip, keeping textures upright.
-	_make_tile_row(_sky_sprites,      "cielo.png",        WIN_H)
+	_make_tile_row(_sky_sprites,      "cielo.png",        WIN_H, Z_SKY)
 	_make_cloud()
-	_make_tile_row(_bg_back_sprites,  "background_2.png", 594.0)
-	_make_tile_row(_bg_mid_sprites,   "background_1.png", 583.0)
-	_make_tile_row(_bg_front_sprites, "humo.png",         501.0)
-	_make_tile_row(_floor_sprites,    "pista.png",        TRACK_H)
+	_make_tile_row(_bg_back_sprites,  "background_2.png", 594.0, Z_BG_BACK)
+	_make_tile_row(_bg_mid_sprites,   "background_1.png", 583.0, Z_BG_MID)
+	_make_tile_row(_bg_front_sprites, "humo.png",         501.0, Z_BG_FRONT)
+	_make_tile_row(_floor_sprites,    "pista.png",        TRACK_H, Z_TRACKS)
 
-func _make_tile_row(arr: Array, fname: String, y_pos: float) -> void:
+func _make_tile_row(arr: Array, fname: String, y_pos: float, z: int) -> void:
 	var tex: Texture2D = load("res://resources/assets/" + fname)
 	var tw: float      = tex.get_width()
 	var n: int         = ceili(WIN_W / tw) + 2
@@ -123,6 +175,7 @@ func _make_tile_row(arr: Array, fname: String, y_pos: float) -> void:
 		sp.centered = false
 		sp.scale    = Vector2(1.0, -1.0)
 		sp.position = Vector2(i * tw, y_pos)
+		sp.z_index  = z
 		add_child(sp)
 		arr.append(sp)
 
@@ -132,20 +185,25 @@ func _make_cloud() -> void:
 	_cloud_sprite.texture  = tex
 	_cloud_sprite.scale    = Vector2(1.0, -1.0)
 	_cloud_sprite.position = Vector2(WIN_W * 1.2, WIN_H * 0.85)
+	_cloud_sprite.z_index  = Z_CLOUD
 	add_child(_cloud_sprite)
 
 func _create_player() -> void:
 	var frog_scene: PackedScene = load("res://scenes/vehicles/vehicle_frog.tscn")
 	_player = frog_scene.instantiate() as BaseVehicle
 	add_child(_player)
-	_player.set_limits(
-		_lane.player_start_y - _lane.wall_height * 0.1,
-		_lane.wall_height * 0.9
-	)
+	# VehiclePhysics.compute_y_limits() already applies the
+	# `-wallHeight*0.1` / `+wallHeight*0.9` transform from
+	# GameLayer::_createPlayer, so it takes the RAW lane values. Passing
+	# pre-adjusted ones (as 1.0.0 did) applied the transform twice and shrank
+	# the playfield from [210, 300] to [201, 282] — 9 units of headroom lost at
+	# the top lane, 9 gained below the bottom lane.
+	_player.set_limits(_lane.player_start_y, _lane.wall_height)
 	var center_y: float     = _lane.player_start_y + _lane.wall_height * 0.5
 	_player.position.y      = center_y
 	_player.position.x      = _player.content_size.x * 2.5
 	_player.player_y        = center_y - _player.content_size.y * 0.5
+	_update_player_z()
 
 # ---------------------------------------------------------------------------
 # Initialisation — wires level config and spawns initial obstacles
@@ -223,6 +281,7 @@ func restart(level_name: String) -> void:
 		_player.position.x    = _player.content_size.x * 2.5
 		_player.player_y      = center_y - _player.content_size.y * 0.5
 		_player.reset_state()
+		_update_player_z()
 
 	# Reconfigure GameManager and re-spawn.
 	if GameManager.game_over.is_connected(_on_game_over):
@@ -239,7 +298,7 @@ func restart(level_name: String) -> void:
 
 func _spawn_initial_obstacles() -> void:
 	var x: float = WorldSpeed.START_X_OBSTACLES
-	while _obstacles.size() < MAX_OBSTACLES:
+	for _i in range(MAX_OBSTACLE_GROUPS):
 		_spawn_group(x)
 		if not _obstacles.is_empty():
 			x = _obstacles.back().position.x + GameManager._min_dist
@@ -270,18 +329,26 @@ func _spawn_group(x: float) -> void:
 
 		obs.position = Vector2(x, y)
 
-		# Z-depth — mirrors C++ addChild(obs, int(WIN_H - z) + GameDeep::GameElements)
-		# z_param per lane: NORMAL(Air)=0, JUMP(Ground)=WIN_H*0.5, SIMPLE(Single)=lane_y
+		# Z-depth — GameLayer::_spawnObstacleGroup:
+		#   addChild(obstacle, int(WIN_H - z_param) + toZ(GameDeep::GameElements))
+		var z_param: float = y                               # SIMPLE → its lane Y
 		match obs.obstacle_type:
-			BaseObstacle.ObstacleType.NORMAL:
-				obs.z_index = int(WIN_H / 10.0)               # 76 — always in front
-			BaseObstacle.ObstacleType.JUMP:
-				obs.z_index = int((WIN_H - WIN_H * 0.5) / 10.0)  # 38 — behind player
-			BaseObstacle.ObstacleType.SIMPLE:
-				obs.z_index = int((WIN_H - y) / 10.0)         # 39-46 depending on lane
+			BaseObstacle.ObstacleType.NORMAL: z_param = Z_PARAM_DOUBLE_AIR
+			BaseObstacle.ObstacleType.JUMP:   z_param = Z_PARAM_DOUBLE_GROUND
+		obs.z_index = int(WIN_H - z_param)
 
 		_obstacles.append(obs)
 		x += dist
+
+# Dynamic player depth — GameLayer::_updatePlayer:
+#   reorderChild(_player, int(WIN_H - (playerY + height*0.75)) + GameElements)
+# Also called at spawn/restart so the player is never drawn at the default z=0
+# for the frame before _physics_process first runs.
+func _update_player_z() -> void:
+	if _player == null:
+		return
+	var z_param: float = _player.player_y + _player.content_size.y * 0.75
+	_player.z_index = int(WIN_H - z_param)
 
 func _acquire_obstacle(kind: int) -> BaseObstacle:
 	match kind:
@@ -326,6 +393,9 @@ func _physics_process(delta: float) -> void:
 				" dx=", snapped(accel_dbg.x - _tilt_baseline_x, 0.01),
 				" y=", snapped(accel_dbg.y, 0.01),
 				" dy=", snapped(accel_dbg.y - _tilt_baseline, 0.01))
+		var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
+		var vel := Vector2.ZERO
+
 		if tilt_active:
 			var accel: Vector3 = Input.get_accelerometer()
 			var raw_y: float = accel.y - _tilt_baseline
@@ -338,12 +408,9 @@ func _physics_process(delta: float) -> void:
 			if absf(raw_x) > TILT_DEAD_ZONE:
 				var t: float = clampf((absf(raw_x) - TILT_DEAD_ZONE) / (TILT_MAX_DIST - TILT_DEAD_ZONE), 0.0, 1.0)
 				norm_x = t if raw_x > 0.0 else -t
-			if norm_y != 0.0 or norm_x != 0.0:
-				var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
-				_player.do_move(Vector2(norm_x * spd * TILT_X_MULT, norm_y * spd), WIN_W)
-		elif _joy_active and (_joy_norm_x != 0.0 or _joy_norm_y != 0.0):
-			var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
-			_player.do_move(Vector2(_joy_norm_x * spd, _joy_norm_y * spd), WIN_W)
+			vel = Vector2(norm_x * spd * TILT_X_MULT, norm_y * spd)
+		elif _joy_active:
+			vel = Vector2(_joy_norm_x * spd, _joy_norm_y * spd)
 		else:
 			# Keyboard fallback for web/desktop — arrows or WASD move, Space jumps (jump in _unhandled_input).
 			var key_x: float = 0.0
@@ -352,15 +419,22 @@ func _physics_process(delta: float) -> void:
 			if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D): key_x += 1.0
 			if Input.is_key_pressed(KEY_UP)    or Input.is_key_pressed(KEY_W): key_y += 1.0
 			if Input.is_key_pressed(KEY_DOWN)  or Input.is_key_pressed(KEY_S): key_y -= 1.0
-			if key_x != 0.0 or key_y != 0.0:
-				var spd: float = VehiclePhysics.DEFAULT_SPEED * delta * PHYSICS_FPS
-				_player.do_move(Vector2(key_x * spd, key_y * spd), WIN_W)
+			vel = Vector2(key_x * spd, key_y * spd)
 
-	# Dynamic z_index — mirrors C++ reorderChild(_player, z) in _updatePlayer.
-	# Formula: (WIN_H - (playerY + height*0.75)) / 10  ≈ 45 at center lane.
+		# do_move() is called unconditionally, including with a zero vector —
+		# GameLayer::_updatePlayer calls updateControl()/doMove() every frame
+		# regardless of stick deflection, and doMove's zero-velocity path is
+		# what clamps player_y into [limit_bot, limit_top] and re-syncs
+		# position.y to it. Skipping it (as 1.0.0 did) left the player resting
+		# 4 units below the intended floor until the first input arrived.
+		_player.do_move(vel, WIN_W)
+
+	# Jump arc — must run after do_move() so the arc sits on top of this frame's
+	# lane movement (mirrors Cocos2d-x JumpBy folding in external position deltas).
 	if _player:
-		var z_param: float = _player.player_y + _player.content_size.y * 0.75
-		_player.z_index = int((WIN_H - z_param) / 10.0)
+		_player.advance_jump(delta)
+
+	_update_player_z()
 
 	GameManager.advance_speed(delta)
 	_update_obstacles(delta)
@@ -431,6 +505,14 @@ func _scroll_sprites(sprites: Array, delta: float) -> void:
 # ---------------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Checked before the pause/state guard so the overlay can be toggled from
+	# the menu, mid-run, or on the game-over screen.
+	if event is InputEventKey and event.pressed and not event.echo:
+		if (event as InputEventKey).keycode == DEBUG_TOGGLE_KEY:
+			toggle_debug_collision()
+			get_viewport().set_input_as_handled()
+			return
+
 	if _paused or GameManager.game_state != GameManager.GameState.READY:
 		return
 
@@ -528,6 +610,7 @@ func reset_for_home() -> void:
 		_player.position.x  = _player.content_size.x * 2.5
 		_player.player_y    = center_y - _player.content_size.y * 0.5
 		_player.reset_state()
+		_update_player_z()
 
 func resume() -> void:
 	_paused = false

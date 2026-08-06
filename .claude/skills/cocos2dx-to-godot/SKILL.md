@@ -46,34 +46,78 @@ $Sprite2D.scale = Vector2(1, -1)
 
 ---
 
-## 2. Jump arc — JumpBy is sine, not parabola
+## 2. Jump arc — JumpBy is a PARABOLA (and it is additive)
 
-Cocos2d-x `JumpBy::create(duration, offset, height, jumps)` uses:
+An earlier revision of this guide claimed `JumpBy` was a sine. It is not.
+`cocos2d/2d/CCActionInterval.cpp` (cocos2d-x-4.0), verbatim:
 
+```cpp
+void JumpBy::update(float t)
+{
+    // parabolic jump (since v0.8.2)
+    if (_target)
+    {
+        float frac = fmodf( t * _jumps, 1.0f );
+        float y = _height * 4 * frac * (1 - frac);
+        y += _delta.y * t;
+        float x = _delta.x * t;
+#if CC_ENABLE_STACKABLE_ACTIONS
+        Vec2 currentPos = _target->getPosition();
+        Vec2 diff = currentPos - _previousPos;
+        _startPosition = diff + _startPosition;   // <- folds in external moves
+        Vec2 newPos = _startPosition + Vec2(x,y);
+        _target->setPosition(newPos);
+        _previousPos = newPos;
+#else
+        _target->setPosition(_startPosition + Vec2(x,y));
+#endif
+    }
+}
 ```
-y_offset = height * |sin(π * t)|   where t ∈ [0,1]
-```
 
-A parabola `4t(1-t)` looks similar but is wrong — the peak is at different times:
-- Sine: peaks at t = 0.5, air-obstacle collision window at t ≈ 0.149
-- Parabola: peak also t = 0.5, but collision window at t ≈ 0.129 (earlier)
+Two things to port, and both were missed in Turbo Race's first pass:
+
+**(a) The curve is `height * 4t(1-t)`, not `height * sin(πt)`.** They agree at
+t = 0, 0.5 and 1, which is why endpoint-and-peak tests pass either way. They
+disagree in between — at t = 0.25 the parabola gives 0.75 of peak, the sine
+0.7071. Write a test at a quarter point, not just the endpoints.
+
+**(b) `CC_ENABLE_STACKABLE_ACTIONS` defaults to `1`,** so the action folds any
+external position change into `_startPosition` and adds its arc on top. If the
+game also moves the node while the jump runs — lane changes in a runner, say —
+those moves apply immediately *and survive the landing*. Tweening `position.y`
+absolutely from a launch Y captured at takeoff silently reverts them, and while
+airborne it desyncs any hitbox derived from `position.y` from one derived from
+the lane variable.
 
 **Correct Godot implementation:**
 
 ```gdscript
 static func jump_arc_offset(t: float) -> float:
-    return MAX_PLAYER_JUMP * sin(t * PI)
+    var frac: float = fmod(t, 1.0)          # _jumps = 1
+    return MAX_PLAYER_JUMP * 4.0 * frac * (1.0 - frac)
 ```
 
-Drive it with a timer accumulator in `_physics_process`:
+Drive it with an accumulator that re-reads the live lane position every frame:
 
 ```gdscript
-_jump_t += delta / JUMP_DURATION          # 0 → 1
-position.y = _player_y + jump_arc_offset(_jump_t)
-if _jump_t >= 1.0:
-    _is_jumping = false
-    position.y = _player_y
+func advance_jump(delta: float) -> void:
+    if state != ActorState.JUMP:
+        return
+    _jump_t += delta / JUMP_DURATION          # 0 → 1
+    if _jump_t >= 1.0:
+        _jump_t = 0.0
+        state = ActorState.IDLE
+        position.y = player_y + content_size.y * 0.5
+        return
+    # `player_y`, NOT a frozen launch Y — this is what makes it additive.
+    position.y = (player_y + content_size.y * 0.5
+        + jump_arc_offset(_jump_t))
 ```
+
+Call it from the game scene's `_physics_process` *after* the frame's movement
+update, rather than overriding `_physics_process` on the vehicle — that keeps
+pause/state gating in one place and guarantees the ordering.
 
 ---
 
@@ -104,27 +148,54 @@ func test_cannot_jump_when_airborne() -> void:
 
 ## 4. Z-depth ordering
 
-Cocos2d-x uses `setLocalZOrder(z)` where higher z = in front.
-Map it to Godot `z_index` via the C++ `GameDeep` enum formula:
+Cocos2d-x uses `setLocalZOrder(z)` where higher z = in front. The spawn call is
 
+```cpp
+addChild(node, static_cast<int>(WIN_SIZE.height - z_param) + toZ(GameDeep::X));
 ```
-z_index = int((WIN_H - z_param) / 10)
+
+**Do not rescale the per-node term.** An earlier revision of this guide
+suggested `int((WIN_H - z_param) / 10)`; that collapses a 768-value range into
+~8 buckets, so nodes that C++ separates by a few pixels of depth end up tied and
+resolved by tree order instead. In Turbo Race it made the player tie with
+bottom-lane walls and render *behind* ground obstacles it was colliding with.
+
+Godot's `z_index` is clamped to ±4096, which is the only real constraint:
+
+- **Per-node depth** — port `int(WIN_H - z_param)` verbatim, 1px granularity
+  intact. For a 768-tall design that lands in roughly 370–768.
+- **Layer bases** — the `GameDeep` constants themselves (-9999 … -2500) are out
+  of range, so rescale *those* into ordered constants. Only their ordering
+  matters, since nothing is interleaved between layers.
+
+```gdscript
+const Z_SKY: int = -600
+const Z_CLOUD: int = -590
+const Z_BG_BACK: int = -580
+const Z_BG_MID: int = -570
+const Z_BG_FRONT: int = -560
+const Z_TRACKS: int = -550
+# game elements: int(WIN_H - z_param), i.e. 370-768 — all in front of the above
 ```
 
 | Layer | C++ z_param | Godot z_index |
 |-------|-------------|---------------|
-| Air obstacles (always in front) | 0 | 76 |
-| Player (dynamic, tracks lane_y) | WIN_H * 0.5 ≈ 384 | ~46 (recalculated each frame) |
-| Single-lane obstacles (by lane) | lane_y | 39–46 |
-| Ground jump obstacles (behind) | WIN_H * 0.5 = 384 | 38 |
+| Air obstacles (always in front) | 0 | 768 |
+| Single-lane obstacles (by lane) | lane_y | 393–463 |
+| Player (dynamic) | player_y + h*0.75 | 372–462, recalculated each frame |
+| Ground jump obstacles | WIN_H * 0.5 = 384 | 384 |
 
 Player z_index must update **every frame** based on its current Y position:
 
 ```gdscript
 func _physics_process(_delta: float) -> void:
     var z_param := _player.player_y + _player.content_size.y * 0.75
-    _player.z_index = int((WIN_H - z_param) / 10.0)
+    _player.z_index = int(WIN_H - z_param)
 ```
+
+Child sprites (shadows) use `z_index = -1` with Godot's default
+`z_as_relative = true`, so they sit one step behind their parent wherever the
+parent lands — same as C++ `addChild(shadow, -1)`.
 
 ---
 
@@ -152,6 +223,24 @@ static func air_collision_rect(pos_x, pos_y, w, h) -> Rect2:
         w * 0.2          # intentional: uses w, not h
     )
 ```
+
+**Never "tune" these for feel.** Turbo Race 1.0.0 shipped `0.355 / 0.34`
+described in its changelog as "matches C++ feel" — a 38% narrower hitbox that
+widened jump-timing tolerance by ~21% and was the single biggest reason players
+reported the port as too easy. Worse, the four unit tests covering the rects were
+rewritten to assert the tuned numbers, so CI certified the divergence green for
+three releases.
+
+Put the fractions in named constants and add a test that reads them back out of
+your spec document, so editing one without the other fails the build:
+
+```gdscript
+const RECT_X_INSET: float = 0.30
+const RECT_WIDTH:   float = 0.55
+```
+
+If a value genuinely must change, the C++ source is the authority and the spec
+document changes in the same commit.
 
 ---
 
@@ -260,6 +349,24 @@ func recycle(obs: BaseObstacle) -> void:
 
 One pool instance per obstacle type (`_single_pool`, `_double_pool`, `_air_pool`).
 
+**The `add_child` on the growth path is load-bearing.** C++
+`ObstaclePool<T>::acquire()` falls back to `new T()`, which is a fully
+constructed object; the naive GDScript translation `return _scene.instantiate()`
+is not. A node that never enters the tree never runs `_ready()`, so every field
+initialised there stays at its default. In Turbo Race that meant
+`content_size == Vector2.ZERO` and an empty collision-rect array, producing an
+obstacle that **rendered nothing, could never kill the player, still awarded
+score when it passed, and poisoned the free list permanently once recycled** —
+plus a leak. It reproduced on every level.
+
+Two defences worth having:
+
+- Size the prefill from the actual worst case. Slide a window the width of your
+  in-flight group count across each level map and take the peak concurrent count
+  per pool type — not a guessed round number.
+- Assert in tests that an obstacle acquired past the prefill count is
+  `is_inside_tree()` and has non-empty collision rects.
+
 ---
 
 ## 10. Scoring
@@ -295,13 +402,29 @@ world_speed = minf(world_speed, level_data.max_speed)
 Before calling a system "ported", verify:
 
 - [ ] All constants read from C++ source (not guessed or approximated)
-- [ ] Collision rect fractions match C++ `contentSize` fractions exactly
-- [ ] Jump arc uses `sin(πt)`, not parabola
+- [ ] Collision rect fractions match C++ `contentSize` fractions exactly, and no
+      constant was "tuned for feel" anywhere in the port's history
+- [ ] Jump arc uses the parabola `4t(1-t)`, not `sin(πt)` — tested at a quarter
+      point, not just endpoints and peak
+- [ ] Jump/move actions that C++ stacks (`CC_ENABLE_STACKABLE_ACTIONS`) are
+      additive in the port: motion applied during an action survives it
 - [ ] Air obstacle guard threshold is `MAX_JUMP * 0.45` = 63.0 units
-- [ ] Z-index formula `int((WIN_H - z_param) / 10)` applied to all spawned nodes
+- [ ] Z-index uses `int(WIN_H - z_param)` at full 1px granularity; only the
+      layer-base constants are rescaled to fit Godot's ±4096 clamp
+- [ ] Pool `acquire()` parents nodes on its growth path, and prefill counts are
+      derived from the real worst-case concurrent count per level map
+- [ ] Spawn loops count the same unit as C++ (groups vs. individual obstacles)
+- [ ] Per-frame updates C++ calls unconditionally are called unconditionally —
+      a zero-input `doMove()` still clamps and re-syncs position
+- [ ] Every C++ `addChild(sprite, …)` has a counterpart; decorative-looking
+      children (shadows) are often the only readout of a gameplay variable
 - [ ] Joystick passes both X and Y to `do_move(Vector2)` — C++ `doMove(Vec2)` takes full 2D vector
 - [ ] Pure physics functions have unit tests with golden-run fixtures
+- [ ] Level content is ported, not authored — map length and per-level
+      multipliers asserted against the C++ JSON
 - [ ] Scoring uses `avoided_count * 100`, not continuous distance
+- [ ] No test asserts a value that contradicts the spec document; add a test
+      that reads the spec at runtime so the two cannot drift apart silently
 
 ---
 

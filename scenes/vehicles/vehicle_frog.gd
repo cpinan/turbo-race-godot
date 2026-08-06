@@ -23,6 +23,7 @@ func _ready() -> void:
 	_sprite.texture = _tex_idle_0
 	content_size    = _tex_idle_0.get_size()   # 175 x 128
 	player_y        = position.y - content_size.y * 0.5
+	_setup_shadow()   # needs content_size — must run after it is assigned
 	jumped.connect(_on_jumped)
 	landed.connect(_on_landed)
 	died.connect(_on_died)
