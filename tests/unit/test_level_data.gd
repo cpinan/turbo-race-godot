@@ -21,8 +21,11 @@ func test_easy_max_world_speed() -> void:
 	assert_almost_eq(d.max_world_speed, 1200.0, 0.001)
 
 func test_easy_map_size() -> void:
+	# 133 entries — the map from Resources/levels/easy.json in the Cocos2d-x
+	# repo, restored verbatim. The 665-entry redesign shipped in 1.1.0 pushed
+	# the first must-jump obstacle from ~25s to ~142s into a run.
 	var d: LevelData = LevelData.load_level("easy")
-	assert_eq(d.map.size(), 665, "easy map has 665 entries")
+	assert_eq(d.map.size(), 133, "easy map has 133 entries (C++ parity)")
 
 func test_normal_speed_multiplier() -> void:
 	var d: LevelData = LevelData.load_level("normal")
