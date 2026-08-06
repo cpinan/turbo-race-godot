@@ -107,3 +107,18 @@ Publishing must show the config as **Published**. A Draft config makes
 `signIn()` fire `userAuthenticated(false)` immediately with no error at
 all — this looks exactly like a code bug and wastes debugging time if you
 don't know to check this first.
+
+## `Error loading configuration for Game Services! Error: 7` during headless export
+
+Every headless export (`--export-debug` / `--export-release`) prints this once
+during the editor's plugin-init scan. It is **benign** — the plugin's editor
+half tries to read the GPGS config through a resource path that isn't
+resolvable in a headless editor context; Error 7 is Godot's
+`ERR_FILE_CANT_OPEN`. It does not affect the exported artifact, and
+`game_ids.xml` is still packaged correctly.
+
+Do not "fix" it, and do not report it as a build failure. Confirm the export
+actually succeeded the normal way: the script's `==> Done:` line plus the
+`.aab`/`.apk` file size. If GPGS sign-in genuinely misbehaves on device, the
+cause is one of the sections above (cert registration, Draft config), never
+this message.

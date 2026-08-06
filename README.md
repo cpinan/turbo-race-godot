@@ -24,8 +24,8 @@ The original C++ source lives at `../Turbo-Race/` (separate repo). It is the beh
 | GUT (test framework) | 9.7.0 |
 | Android min SDK | 24 (Android 7.0) |
 | Android target SDK | 36 (Android 16) |
-| App version name | 1.3.0 |
-| App version code | 7 |
+| App version name | 1.4.0 |
+| App version code | 8 |
 | Package | `com.carlos.pinan.turborace.godot` |
 | GDScript | Static-typed throughout |
 

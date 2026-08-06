@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.4.0] — 2026-08-06
+
 ### Fixed
 - **Obstacles could spawn invisible and harmless**: once a pool ran past its prefill count, `ObstaclePool.acquire()` returned an un-parented node, so `_ready()` never ran — the obstacle rendered nothing, could never collide, still awarded score, and poisoned the pool for the rest of the session. Reachable on every level (normal mode overran two pools by ~2x). Growth-path instances are now parented; prefills raised to 16/16/16
 - **Player hitbox was 38% smaller than the original**: 1.0.0 shipped "tuned" collision rects (`w*0.355 / w*0.34`) against the C++ and `SPEC.md` values of `w*0.30 / w*0.55`, widening jump-timing slack by ~21%. Restored; the four unit tests that had been rewritten to assert the tuned values are re-derived from spec

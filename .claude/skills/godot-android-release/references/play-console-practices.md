@@ -22,6 +22,49 @@ Godot Android project.
 
 `{version_name} ({version_code})` — e.g. `1.3.0 (7)`.
 
+## Release notes ("What's new")
+
+Play Console's release-notes editor accepts **all languages in one paste**,
+using an XML-ish tag per locale. The tags must match the locales the listing
+is actually published in, in the order the console lists them — it pre-fills
+the field with empty tags, so copy that skeleton rather than guessing locale
+codes (`es-419`, not `es`; bare `id` for Indonesian, no region suffix):
+
+```
+<en-US>
+...notes...
+</en-US>
+<es-419>
+...notes...
+</es-419>
+```
+
+- **500 characters per language, hard limit.** Counted per locale block, not
+  total. Verify locally before pasting — the console truncates/errors at
+  submit time, after you've already filled in the rest of the release.
+- Write the notes to a file in `builds/` next to the `.aab` (e.g.
+  `app_v8_release_notes.txt`) and verify every block in one shot:
+
+  ```sh
+  python3 - <<'EOF'
+  import re
+  t = open('builds/app_v8_release_notes.txt', encoding='utf-8').read()
+  for lang in ['en-US','es-419','hi-IN','id','pt-BR','ru-RU']:
+      m = re.search(r'<%s>\n(.*?)\n</%s>' % (lang, lang), t, re.S)
+      n = len(m.group(1))
+      print(f"{lang:8s} {n:4d} {'OK' if n <= 500 else 'OVER LIMIT'}")
+  EOF
+  ```
+
+- Keep notes user-facing, not changelog-facing: describe what the player will
+  notice ("obstacles could spawn invisible and pass through you"), not the
+  internal cause ("pool growth path returned an un-parented node"). The
+  `CHANGELOG.md` entry is the engineering record; these are marketing copy
+  derived from it.
+- Machine-translated notes ship fine for a small game, but say so to the
+  project owner — non-Latin-script locales (hi-IN, ru-RU) are the ones where
+  an awkward phrasing is least likely to be caught by anyone on the team.
+
 ## Safe-to-ignore Play Console warnings (for a Godot game specifically)
 
 - **"No deobfuscation file" / R8 minification recommendation.** Godot's Java
