@@ -47,9 +47,17 @@ Verified: the slimmed build boots and plays in desktop Chrome; 184/184 tests pas
 
 ## 2. The size problem (the one real blocker)
 
-13.6 MB gzipped is fine for itch and Newgrounds. It is **borderline for
-CrazyGames and likely disqualifying for Poki**, both of which judge on
-time-to-first-play on a mid-range phone on mobile data.
+13.6 MB gzipped is fine for itch, Newgrounds **and CrazyGames**.
+
+Corrected 2026-08-20 against CrazyGames' published requirements: their limits
+are **≤ 50 MB initial download**, ≤ 250 MB total, ≤ 1500 files. This build is
+13.6 MB over the wire, 45 MB unpacked, 9 files — comfortably inside all three.
+An earlier version of this doc called it "borderline for CrazyGames", which was
+guesswork and would have sent someone to build a custom engine template for no
+reason.
+
+Poki remains the one that judges on time-to-first-play rather than a stated
+ceiling, so the section below still applies there.
 
 Breakdown of the 13.6 MB:
 
@@ -132,7 +140,13 @@ for a solo dev.
 - Requires keyboard controls on desktop — ✅ already done (`game_scene.gd:418-421`
   WASD/arrows, `:577` space to jump).
 - Restricts outbound links, which conflicts with the Play Store CTA. See §4.
-- Human QA review before it goes live; load time is part of that review.
+- Automated QA tool plus a **basic launch → full launch** progression. Full
+  launch expects the game to "land directly in gameplay" rather than linger on
+  intro screens — worth knowing, since this game opens on a difficulty-select
+  menu. That is a menu, not a splash, but it is the kind of thing their reviewer
+  comments on.
+- Size limits: ≤ 50 MB initial download, ≤ 250 MB total, ≤ 1500 files. This
+  build is well inside all three.
 
 **GameDistribution** (Azerion) — the widest non-exclusive reach.
 - One SDK integration, then syndicated to thousands of small portals.
@@ -149,8 +163,9 @@ snippet in `web/head/` plus one cloned preset — an hour, not a project.
 - They playtest against retention/session metrics before accepting.
 - Expect exclusivity pressure. **Read the contract before signing: exclusivity
   here can lock you out of every portal in Tier 2.**
-- The 13.6 MB load is a likely rejection reason as-is. Do §2's custom template
-  before submitting.
+- The 13.6 MB load may still be a rejection reason here specifically — Poki
+  publishes no ceiling and judges on time-to-first-play. §2's custom template is
+  a Poki prerequisite, not a CrazyGames one.
 - Realistic assessment: apply, but do not wait on the answer.
 
 **Armor Games, CoolMathGames, Silvergames, Y8** — mostly flat-fee licensing or
