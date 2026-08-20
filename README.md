@@ -186,7 +186,6 @@ All assets are direct ports from the original Cocos2d-x `Resources/` folder.
 
 | File | Used for |
 |------|----------|
-| `vg_bt_music.mp3` | Background music — "BT Turbo Tunnel - VGMusic.com" |
 | `diego_music.mp3` | Background music — "Music by Diego Rodriguez" |
 | `POL-turtle-blues-short.mp3` | Background music — "Turtle Blues - PlayOnLoop.com" |
 | `jump.mp3` | Jump SFX |

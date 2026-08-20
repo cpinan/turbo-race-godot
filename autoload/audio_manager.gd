@@ -2,13 +2,18 @@ extends Node
 # Autoload: AudioManager
 # Mirrors AudioEngine usage in C++ — music rotation, SFX, mute.
 
+# "BT Turbo Tunnel - VGMusic.com" (vg_bt_music.mp3) was removed 2026-08-20.
+# VGMusic hosts fan-sequenced arrangements of copyrighted game music — that
+# track is Battletoads' Turbo Tunnel theme, and the HUD credit in hud.gd is
+# attribution, not a licence. Newgrounds states outright that submissions
+# containing unlicensed music are removed, and it was shipping as track 0, the
+# first thing every player heard. Kept as index order, not a set: play_music()
+# rotates with a modulo, so the array length is the only thing that matters.
 const MUSIC_TRACKS: Array = [
-	"res://resources/audio/vg_bt_music.mp3",
 	"res://resources/audio/diego_music.mp3",
 	"res://resources/audio/POL-turtle-blues-short.mp3",
 ]
 const MUSIC_TRACK_NAMES: Array = [
-	"BT Turbo Tunnel - VGMusic.com",
 	"Music by Diego Rodriguez",
 	"Turtle Blues - PlayOnLoop.com",
 ]
