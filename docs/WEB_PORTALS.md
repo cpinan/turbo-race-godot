@@ -70,8 +70,32 @@ Breakdown of the 13.6 MB:
 The game is not the problem — the engine is. Two-thirds of the download is
 Godot itself, and no asset optimisation touches it.
 
-**The fix, if a portal rejects on load time:** compile custom web export
-templates with the unused engine modules stripped. For a 2D endless runner:
+**Built and measured, 2026-08-20** — `tools/build_web_template.sh`.
+
+| | Stock template | Slim template |
+|---|---|---|
+| `godot.wasm` raw | 39.5 MB | **25.7 MB** |
+| Game total raw | 42.2 MB | **30.0 MB** |
+| Game total gzipped | 13.6 MB | **10.5 MB** |
+
+**It does not reach CrazyGames' 20 MB mobile-homepage threshold, and nothing
+will.** Getting the total under 20 MB raw needs the wasm at ~15.5 MB; 25.7 MB is
+what remains after `disable_3d` and ~25 stripped modules, and the rest is core
+engine — servers, renderer, GDScript VM, resource system. Treat 20 MB as out of
+reach for Godot 4 web rather than a target to keep grinding at.
+
+What it is still worth: **29% less to download on every channel**, which helps
+load time everywhere, not just CrazyGames.
+
+Cost to keep: the template pins an engine version and an emscripten version, so
+it must be rebuilt on every Godot upgrade, and each rebuild is a different
+binary that invalidates prior testing. `export_presets.cfg` is gitignored, so
+the three web presets' `custom_template/release` path is **not versioned** —
+it points at
+`~/Library/Application Support/Godot/export_templates/4.7.1.stable/web_nothreads_release_slim.zip`
+and must be re-pointed by hand in a fresh checkout.
+
+The build command, with the reasoning for every flag kept or dropped:
 
 ```sh
 scons platform=web target=template_release \
