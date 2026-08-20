@@ -25,6 +25,10 @@ extends Node
 
 enum Portal { OWNED, CRAZYGAMES, GAMEDISTRIBUTION }
 
+# Mute reasons. Audio is silenced while any of them is active.
+const MUTE_AD: StringName = &"ad"
+const MUTE_PORTAL: StringName = &"portal"
+
 # Emitted after a portal ad closes (or is refused / errors out). `shown` is
 # false when no ad played, which is the common case — never gate progress on it.
 signal ad_finished(shown: bool)
@@ -57,9 +61,13 @@ var _gameplay_active: bool = false
 # Negative sentinel so the first ad is not blocked by the initial cooldown.
 var _last_ad_msec: float = -MIN_SECONDS_BETWEEN_ADS * 1000.0
 
-# Only true between adStarted and adFinished/adError. An ad refused on cooldown
-# never starts, so the game must not be unmuted as if it had.
-var _muted_for_ad: bool = false
+# Audio is silenced for more than one reason and they overlap: an ad can start
+# while CrazyGames' own site chrome already has the game muted. Tracking
+# reasons rather than a bool stops the end of an ad from unmuting a game the
+# portal wants silent.
+var _mute_reasons: Dictionary = {}
+
+var _mute_callback: JavaScriptObject = null
 
 
 func _ready() -> void:
@@ -80,6 +88,11 @@ func _ready() -> void:
 			push_warning("WebPortal: build tagged for a portal but window.TurboPortal is missing — wrong HTML shell? Ads disabled.")
 		else:
 			_ad_callback = JavaScriptBridge.create_callback(_on_js_ad_event)
+			_mute_callback = JavaScriptBridge.create_callback(_on_js_mute_changed)
+			# Registered immediately: the shell replays the current value once
+			# the SDK resolves, so a game that loads already muted is silenced
+			# rather than playing a burst of audio first.
+			_iface.onMuteChanged(_mute_callback)
 
 	GameManager.game_state_changed.connect(_on_game_state_changed)
 	print("WebPortal: variant=", portal_name(), " sdk=", _iface != null)
@@ -185,12 +198,40 @@ func _on_js_ad_event(args: Array) -> void:
 			# duration, restored when it ends or fails.
 			_last_ad_msec = Time.get_ticks_msec()
 			_runs_since_ad = 0
-			_muted_for_ad = true
 			_gameplay_stop()
-			AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), true)
+			set_mute_reason(MUTE_AD, true)
 		"finished", "error":
 			_ad_in_flight = false
-			if _muted_for_ad:
-				_muted_for_ad = false
-				AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), false)
+			set_mute_reason(MUTE_AD, false)
 			ad_finished.emit(event == "finished")
+
+
+# ---------------------------------------------------------------------------
+# Audio muting
+#
+# Two independent sources: an ad in progress, and the portal's own mute
+# control. CrazyGames' docs say their muteAudio setting "should take priority
+# over your in-game audio settings", so this is applied at the Master bus —
+# above AudioManager, which only consults the player's saved preference. A
+# player toggling sound on in-game therefore cannot override the portal.
+# ---------------------------------------------------------------------------
+
+func set_mute_reason(reason: StringName, active: bool) -> void:
+	if active:
+		_mute_reasons[reason] = true
+	else:
+		_mute_reasons.erase(reason)
+	AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), is_muted())
+
+
+func is_muted() -> bool:
+	return not _mute_reasons.is_empty()
+
+
+func has_mute_reason(reason: StringName) -> bool:
+	return _mute_reasons.has(reason)
+
+
+func _on_js_mute_changed(args: Array) -> void:
+	var muted: bool = args.size() > 0 and bool(args[0])
+	set_mute_reason(MUTE_PORTAL, muted)

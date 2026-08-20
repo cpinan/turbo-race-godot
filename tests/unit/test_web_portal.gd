@@ -267,3 +267,64 @@ func test_cta_labels_are_fully_renderable_in_the_button_font() -> void:
 			assert_true(font.has_char(c),
 				"%s: font has no glyph for %s (U+%04X) — it would render as tofu"
 					% [label, label[i], c])
+
+
+# ---------------------------------------------------------------------------
+# Mute reasons
+#
+# Ad mute and portal mute overlap. CrazyGames can silence the game while an ad
+# is running, and the end of that ad must not unmute a game the portal still
+# wants silent — which a single bool cannot express.
+# ---------------------------------------------------------------------------
+
+func _master_is_muted() -> bool:
+	return AudioServer.is_bus_mute(AudioServer.get_bus_index("Master"))
+
+func after_each() -> void:
+	# Never leave the bus muted for a later test.
+	WebPortal.set_mute_reason(WebPortal.MUTE_AD, false)
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, false)
+
+func test_single_reason_mutes_and_unmutes() -> void:
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, true)
+	assert_true(_master_is_muted(), "portal mute silences the bus")
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, false)
+	assert_false(_master_is_muted(), "clearing the only reason unmutes")
+
+func test_ad_ending_does_not_unmute_a_portal_muted_game() -> void:
+	# The bug this structure exists to prevent.
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, true)
+	WebPortal._on_js_ad_event(["started"])
+	assert_true(_master_is_muted(), "muted for both reasons")
+	WebPortal._on_js_ad_event(["finished"])
+	assert_true(_master_is_muted(),
+		"ad over, but CrazyGames still wants the game silent")
+	assert_true(WebPortal.has_mute_reason(WebPortal.MUTE_PORTAL), "portal reason survives")
+	assert_false(WebPortal.has_mute_reason(WebPortal.MUTE_AD), "ad reason cleared")
+	WebPortal._last_ad_msec = -WebPortal.MIN_SECONDS_BETWEEN_ADS * 1000.0
+
+func test_portal_unmute_during_an_ad_keeps_the_ad_mute() -> void:
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, true)
+	WebPortal._on_js_ad_event(["started"])
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, false)
+	assert_true(_master_is_muted(), "the ad is still playing")
+	WebPortal._on_js_ad_event(["finished"])
+	assert_false(_master_is_muted(), "both reasons gone")
+	WebPortal._last_ad_msec = -WebPortal.MIN_SECONDS_BETWEEN_ADS * 1000.0
+
+func test_setting_the_same_reason_twice_is_idempotent() -> void:
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, true)
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, true)
+	WebPortal.set_mute_reason(WebPortal.MUTE_PORTAL, false)
+	assert_false(_master_is_muted(), "one clear undoes repeated sets")
+
+func test_js_mute_event_maps_to_the_portal_reason() -> void:
+	WebPortal._on_js_mute_changed([true])
+	assert_true(WebPortal.has_mute_reason(WebPortal.MUTE_PORTAL), "true mutes")
+	WebPortal._on_js_mute_changed([false])
+	assert_false(WebPortal.has_mute_reason(WebPortal.MUTE_PORTAL), "false unmutes")
+
+func test_malformed_mute_event_is_treated_as_unmuted() -> void:
+	WebPortal._on_js_mute_changed([])
+	assert_false(WebPortal.has_mute_reason(WebPortal.MUTE_PORTAL),
+		"a malformed event must not strand the game silent")

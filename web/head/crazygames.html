@@ -17,11 +17,37 @@ window.TurboPortal = (function () {
 	var ready = false;
 	var adBusy = false;
 
+	// Portal-driven mute. CrazyGames' own site chrome can silence an embedded
+	// game, and their docs require that setting to take priority over the
+	// game's own audio toggle — so this is reported to GDScript separately and
+	// applied at the audio bus, above anything the in-game mute button does.
+	var muted = false;
+	var muteCb = null;
+
+	function pushMute(next) {
+		next = !!next;
+		if (next === muted) { return; }
+		muted = next;
+		if (muteCb) { muteCb(muted); }
+	}
+
+	function watchSettings() {
+		try {
+			pushMute(sdk.game.settings && sdk.game.settings.muteAudio);
+			sdk.game.addSettingsChangeListener(function (settings) {
+				pushMute(settings && settings.muteAudio);
+			});
+		} catch (err) {
+			console.warn('settings listener failed:', err);
+		}
+	}
+
 	try {
 		if (window.CrazyGames && window.CrazyGames.SDK) {
 			window.CrazyGames.SDK.init().then(function () {
 				sdk = window.CrazyGames.SDK;
 				ready = true;
+				watchSettings();
 			}).catch(function (err) {
 				console.warn('CrazyGames SDK init failed:', err);
 			});
@@ -35,6 +61,14 @@ window.TurboPortal = (function () {
 	return {
 		name: 'crazygames',
 		isReady: function () { return ready; },
+
+		// cb(muted: bool). Registered before SDK.init() resolves, so the
+		// current value is pushed as soon as settings become readable rather
+		// than being missed.
+		onMuteChanged: function (cb) {
+			muteCb = cb;
+			if (muted) { cb(true); }
+		},
 
 		gameplayStart: function () {
 			if (!ready) { return; }

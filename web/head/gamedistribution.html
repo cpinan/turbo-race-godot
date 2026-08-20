@@ -52,6 +52,10 @@ window.TurboPortal = (function () {
 		name: 'gamedistribution',
 		isReady: function () { return !!window.__turboGdReady && !!sdk(); },
 
+		// GD has no portal-driven mute. Same signature as the CrazyGames shell
+		// so web_portal.gd calls one API regardless of portal.
+		onMuteChanged: function (_cb) { /* no GD equivalent */ },
+
 		// GD has no gameplay session API in the CrazyGames sense. Preloading on
 		// gameplay start is the closest useful equivalent: it warms the ad that
 		// will be shown at the next break instead of stalling on it.
