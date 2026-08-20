@@ -119,12 +119,16 @@ body {
 				case 'SDK_READY':
 					window.__turboGdReady = true;
 					break;
+				case 'SDK_GAME_PAUSE':
+					// GD pauses the game when the ad actually begins.
+					if (window.__turboAdStarted) { window.__turboAdStarted(); }
+					break;
 				case 'SDK_GAME_START':
 					// Ad over (or never ran) — resume.
-					if (window.__turboAdDone) { window.__turboAdDone(true); }
+					if (window.__turboAdDone) { window.__turboAdDone('finished'); }
 					break;
 				case 'SDK_ERROR':
-					if (window.__turboAdDone) { window.__turboAdDone(false); }
+					if (window.__turboAdDone) { window.__turboAdDone('error'); }
 					break;
 				default:
 					break;
@@ -156,31 +160,33 @@ body {
 
 				gameplayStop: function () { /* no GD equivalent */ },
 
-				// cb(shown: boolean). Must fire exactly once, on every path — GDScript
-				// unmutes audio in the handler, so a dropped callback leaves the game
-				// silent forever. GD can go quiet if the ad frame fails to load, hence
-				// the timeout.
+				// cb(event) where event is "started" | "finished" | "error".
+				// Same contract as the CrazyGames shell so autoload/web_portal.gd does
+				// not branch per portal. GD is event-driven rather than callback-driven:
+				// SDK_GAME_PAUSE means the ad began, SDK_GAME_START means play resumes.
+				// Exactly one of "finished"/"error" must fire — GDScript unmutes there,
+				// so the timeout below exists to cover a silently failed ad frame.
 				requestAd: function (cb) {
 					var s = sdk();
-					if (!s || adBusy) { cb(false); return; }
+					if (!s || adBusy) { cb('error'); return; }
 					adBusy = true;
 					var settled = false;
-					var done = function (shown) {
+					window.__turboAdStarted = function () { if (!settled) { cb('started'); } };
+					var done = function (event) {
 						if (settled) { return; }
 						settled = true;
 						adBusy = false;
 						window.__turboAdDone = null;
-						cb(shown);
+						window.__turboAdStarted = null;
+						cb(event);
 					};
 					window.__turboAdDone = done;
-					// Backstop: GD's own events are the happy path, this catches a
-					// silent failure so the game never hangs muted.
-					setTimeout(function () { done(false); }, 30000);
+					setTimeout(function () { done('error'); }, 30000);
 					try {
 						s.showAd('interstitial');
 					} catch (err) {
 						console.warn('showAd threw:', err);
-						done(false);
+						done('error');
 					}
 				}
 			};

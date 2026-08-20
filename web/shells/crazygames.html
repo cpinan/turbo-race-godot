@@ -143,27 +143,36 @@ body {
 					try { sdk.game.gameplayStop(); } catch (err) { console.warn(err); }
 				},
 
-				// cb(shown: boolean). Must fire exactly once, on every path — GDScript
-				// unmutes audio in the handler, so a dropped callback leaves the game
-				// silent forever.
+				// cb(event) where event is "started" | "finished" | "error".
+				//
+				// "started" is optional — an ad refused on cooldown never starts, which
+				// is why GDScript mutes on "started" rather than before the request.
+				// Exactly one of "finished"/"error" always fires: GDScript unmutes and
+				// resumes there, so a dropped terminal event leaves the game silent and
+				// paused forever.
+				//
+				// CrazyGames documents a ~3 minute midgame interval and returns an
+				// "adCooldown" error if asked sooner; that arrives as "error", which is
+				// a normal outcome and not a failure to report.
 				requestAd: function (cb) {
-					if (!ready || adBusy) { cb(false); return; }
+					if (!ready || adBusy) { cb('error'); return; }
 					adBusy = true;
 					var settled = false;
-					var done = function (shown) {
+					var done = function (event) {
 						if (settled) { return; }
 						settled = true;
 						adBusy = false;
-						cb(shown);
+						cb(event);
 					};
 					try {
 						sdk.ad.requestAd('midgame', {
-							adFinished: function () { done(true); },
-							adError: function (err) { console.warn('ad error:', err); done(false); }
+							adStarted: function () { if (!settled) { cb('started'); } },
+							adFinished: function () { done('finished'); },
+							adError: function (err) { console.warn('ad error:', err); done('error'); }
 						});
 					} catch (err) {
 						console.warn('requestAd threw:', err);
-						done(false);
+						done('error');
 					}
 				}
 			};
