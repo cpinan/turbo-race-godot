@@ -11,16 +11,36 @@ A **Web** export preset (`preset.2`) is in `export_presets.cfg`:
   template, so it runs on any static host **without** COOP/COEP cross-origin
   isolation headers (itch.io, GitHub Pages, etc. work out of the box).
 - `export_path="builds/web/index.html"`.
+- `exclude_filter="tests/*, addons/gut/*, addons/admob/*"` (added 2026-08-20).
+  The AdMob addon is ~7 MB of Android-only `.aar` payload that every browser
+  player was downloading for nothing; GUT and the test suite likewise never run
+  in a shipped build. `index.pck`: **10.9 MB → 5.5 MB**.
+  `GodotPlayGameServices` and `InappReviewPlugin` are deliberately **kept** —
+  `project.godot` autoloads GPGS by uid, so excluding it risks a boot-time
+  autoload failure for ~500 KB of savings. Not worth it.
 
 ## Build
+
+```sh
+tools/build_web.sh owned        # or: crazygames | gamedistribution | all
+```
+
+Builds the preset, zips it with `index.html` at the zip root, and prints the
+gzipped transfer size. There are three web presets, not one — see
+`WEB_PORTALS.md` §4 for why the store CTA and a portal ad SDK cannot coexist in
+a single build.
+
+Raw equivalent for the default preset:
 
 ```sh
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
   --export-release "Web" builds/web/index.html
 ```
 
-Output (`builds/web/`): `index.html`, `index.js`, `index.wasm` (~39 MB),
-`index.pck` (~10 MB), audio worklets, icons.
+Output (`builds/web/`): `index.html`, `index.js`, `index.wasm` (39 MB raw /
+9.6 MB gzipped), `index.pck` (5.5 MB raw / 4.9 MB gzipped), audio worklets,
+icons. **Total transfer ~14.6 MB gzipped** — see `WEB_PORTALS.md` §2 for why
+that number matters and how to cut it if a portal rejects on load time.
 
 Test locally (must be http(s), not `file://`):
 ```sh
@@ -70,3 +90,7 @@ Put a gameplay GIF + "Play in browser" + Play badge above the fold.
 Web is a marketing demo channel only — it does not change game scope. Leaderboard,
 achievements, ads, and tilt remain Android features; web is single-player, local
 high-score, joystick. Flag any web-specific divergence in `MIGRATION_NOTES.md`.
+
+## Where it gets published
+See **`docs/WEB_PORTALS.md`** — portal-by-portal requirements, the build-variant
+scheme needed for ad-SDK portals, and honest revenue expectations.
