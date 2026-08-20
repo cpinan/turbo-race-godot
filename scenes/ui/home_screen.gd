@@ -71,7 +71,7 @@ func _ready() -> void:
 	# half of the screen is empty and the CTA is not competing with anything.
 	# Parented to _menu so it stays hidden through the logo intro and follows
 	# the menu's own show/hide, exactly like the difficulty buttons.
-	PlayStoreCta.attach(_menu, Rect2(500, 516, 500, 56), "▶  Get it on Google Play")
+	PlayStoreCta.attach(_menu, Rect2(500, 516, 500, 56), PlayStoreCta.TEXT_SHORT)
 
 func _start_button_animations() -> void:
 	# Mirrors C++ RepeatForever ScaleTo sequence — scale=1.05, time_dt=1.3s

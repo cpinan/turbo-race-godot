@@ -170,3 +170,25 @@ func test_attach_returns_null_when_not_allowed() -> void:
 	assert_null(PlayStoreCta.attach(host, Rect2(0, 0, 100, 40), "x"),
 		"attach() returns null rather than an invisible button")
 	assert_eq(host.get_child_count(), 0, "attach() adds no node at all when disallowed")
+
+
+# ---------------------------------------------------------------------------
+# CTA label glyph coverage
+#
+# Carton_Six.ttf is a 194-glyph display face — no arrows, no guillemets, not
+# even ">". A decorative leading glyph silently renders as fallback tofu, which
+# no logic test catches and which only shows up by looking at the screen. This
+# asserts the labels stay inside what the font can actually draw.
+# ---------------------------------------------------------------------------
+
+func test_cta_labels_are_fully_renderable_in_the_button_font() -> void:
+	var font: Font = load("res://resources/fonts/Carton_Six.ttf")
+	assert_not_null(font, "CTA font loads")
+	for label in [PlayStoreCta.TEXT_LONG, PlayStoreCta.TEXT_SHORT]:
+		for i in label.length():
+			var c: int = label.unicode_at(i)
+			if c == 32:  # space is not in every cmap and needs no glyph
+				continue
+			assert_true(font.has_char(c),
+				"%s: font has no glyph for %s (U+%04X) — it would render as tofu"
+					% [label, label[i], c])

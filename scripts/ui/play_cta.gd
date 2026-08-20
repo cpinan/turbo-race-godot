@@ -19,6 +19,12 @@ const NODE_NAME: StringName = &"PlayStoreCTA"
 
 const _FONT_PATH: String = "res://resources/fonts/Carton_Six.ttf"
 
+# Carton_Six is a 194-glyph display face: no arrows, no guillemets, not even
+# ">". A decorative leading glyph renders as fallback tofu, so the labels are
+# plain text. test_web_portal.gd asserts every character here is in the font.
+const TEXT_LONG:  String = "Get the full game on Google Play"
+const TEXT_SHORT: String = "Get it on Google Play"
+
 const _COLOR_NORMAL:  Color = Color(0.18, 0.60, 0.24)
 const _COLOR_HOVER:   Color = Color(0.22, 0.70, 0.29)
 const _COLOR_PRESSED: Color = Color(0.14, 0.48, 0.19)

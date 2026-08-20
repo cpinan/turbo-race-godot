@@ -17,7 +17,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   outbound links and forbid third-party ad code, so one build cannot serve both.
   New `autoload/web_portal.gd` (inert off-web, same guard pattern as
   `AdManager`), generated per-portal HTML shells, `tools/build_web.sh`,
-  `tools/gen_web_shells.py`, and 17 tests. See `docs/WEB_PORTALS.md`
+  `tools/gen_web_shells.py`, and 18 tests. See `docs/WEB_PORTALS.md`
 - `docs/WEB_PORTALS.md` — portal-by-portal requirements, the size analysis, and
   revenue expectations
 

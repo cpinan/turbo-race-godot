@@ -54,5 +54,4 @@ func show_result(level_name: String, score: GameScore) -> void:
 func _build_play_cta() -> void:
 	# Sits just below the game-over panel (BG ends at y=624 in the 1024x768
 	# viewport), so it never overlaps the Home/Restart buttons.
-	PlayStoreCta.attach(self, Rect2(262, 638, 500, 56),
-		"▶  Get the full game on Google Play")
+	PlayStoreCta.attach(self, Rect2(262, 638, 500, 56), PlayStoreCta.TEXT_LONG)

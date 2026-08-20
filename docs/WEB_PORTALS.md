@@ -188,7 +188,7 @@ tags** (`custom_features=` in the export preset), read at runtime through
 | `web/shells/*.html` | Generated shells. **Never edit — they are overwritten.** |
 | `tools/gen_web_shells.py` | Regenerates shells from Godot's own template + the head snippets. `--check` fails on stale. |
 | `tools/build_web.sh` | Builds and zips any variant, or `all`. |
-| `tests/unit/test_web_portal.gd` | 17 tests: inert off-web, CTA gating, ad pacing, CTA present on all three screens for the owned build and absent on every other target. |
+| `tests/unit/test_web_portal.gd` | 18 tests: inert off-web, CTA gating, ad pacing, CTA present on all three screens for the owned build and absent on every other target, and CTA labels renderable in the button font. |
 
 ### Preset settings — recreate these by hand if needed
 
