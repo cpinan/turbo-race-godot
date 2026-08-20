@@ -1,9 +1,14 @@
 <!DOCTYPE html>
+<!--
+	GENERATED FILE — do not edit.
+	Source: Godot 4.7.1.stable godot.html + web/head/crazygames.html
+	Regenerate: python3 tools/gen_web_shells.py
+-->
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<title>TurboRace</title>
+		<title>$GODOT_PROJECT_NAME</title>
 		<style>
 html, body, #canvas {
 	margin: 0;
@@ -38,7 +43,7 @@ body {
 }
 
 #status {
-	background-color: #000000;
+	background-color: $GODOT_SPLASH_COLOR;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -90,9 +95,81 @@ body {
 	z-index: 1;
 }
 		</style>
-		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
-<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+		<!--
+		CrazyGames head snippet — injected into web/shells/crazygames.html by
+		tools/gen_web_shells.py. Edit this file, never the generated shell.
 
+		Installs window.TurboPortal, the four-method façade autoload/web_portal.gd
+		calls. All CrazyGames-specific API knowledge is confined to this file.
+
+		VERIFY BEFORE SUBMITTING: the SDK URL and method names below are the v3 API.
+		CrazyGames revs their SDK; re-check developer.crazygames.com/sdk before the QA
+		submission and update this file if the surface moved. The façade contract with
+		GDScript stays the same either way.
+		-->
+		<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+		<script>
+		window.TurboPortal = (function () {
+			var sdk = null;
+			var ready = false;
+			var adBusy = false;
+
+			try {
+				if (window.CrazyGames && window.CrazyGames.SDK) {
+					window.CrazyGames.SDK.init().then(function () {
+						sdk = window.CrazyGames.SDK;
+						ready = true;
+					}).catch(function (err) {
+						console.warn('CrazyGames SDK init failed:', err);
+					});
+				} else {
+					console.warn('CrazyGames SDK script did not load; running unmonetized.');
+				}
+			} catch (err) {
+				console.warn('CrazyGames SDK threw during init:', err);
+			}
+
+			return {
+				name: 'crazygames',
+				isReady: function () { return ready; },
+
+				gameplayStart: function () {
+					if (!ready) { return; }
+					try { sdk.game.gameplayStart(); } catch (err) { console.warn(err); }
+				},
+
+				gameplayStop: function () {
+					if (!ready) { return; }
+					try { sdk.game.gameplayStop(); } catch (err) { console.warn(err); }
+				},
+
+				// cb(shown: boolean). Must fire exactly once, on every path — GDScript
+				// unmutes audio in the handler, so a dropped callback leaves the game
+				// silent forever.
+				requestAd: function (cb) {
+					if (!ready || adBusy) { cb(false); return; }
+					adBusy = true;
+					var settled = false;
+					var done = function (shown) {
+						if (settled) { return; }
+						settled = true;
+						adBusy = false;
+						cb(shown);
+					};
+					try {
+						sdk.ad.requestAd('midgame', {
+							adFinished: function () { done(true); },
+							adError: function (err) { console.warn('ad error:', err); done(false); }
+						});
+					} catch (err) {
+						console.warn('requestAd threw:', err);
+						done(false);
+					}
+				}
+			};
+		}());
+		</script>
+		$GODOT_HEAD_INCLUDE
 	</head>
 	<body>
 		<canvas id="canvas">
@@ -104,15 +181,15 @@ body {
 		</noscript>
 
 		<div id="status">
-			<img id="status-splash" class="show-image--false fullsize--true use-filter--true" src="index.png" alt="">
+			<img id="status-splash" class="$GODOT_SPLASH_CLASSES" src="$GODOT_SPLASH" alt="">
 			<progress id="status-progress"></progress>
 			<div id="status-notice"></div>
 		</div>
 
-		<script src="index.js"></script>
+		<script src="$GODOT_URL"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":4257772,"index.wasm":39509339},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
-const GODOT_THREADS_ENABLED = false;
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 const engine = new Engine(GODOT_CONFIG);
 
 (function () {
@@ -217,4 +294,3 @@ const engine = new Engine(GODOT_CONFIG);
 		</script>
 	</body>
 </html>
-

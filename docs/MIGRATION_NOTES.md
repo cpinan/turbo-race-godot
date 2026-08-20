@@ -415,3 +415,36 @@ A longer-form map variant is a possible future milestone, not built here.
 
 Pool prefills were re-sized for the restored maps (worst-case concurrent count
 over a 10-group window: single 20, ground 14, air 13) to 24 / 18 / 18.
+
+---
+
+## Web build variants — deliberate divergence from the Android build (2026-08-20)
+
+`CLAUDE.md` requires web-specific divergences to be flagged here. There are two,
+both in `autoload/web_portal.gd`, and neither touches gameplay.
+
+**1. A "Get it on Google Play" button on the home, pause, and game-over
+screens.** Web only, and only on our own channels (itch.io, GitHub Pages,
+local). It does not exist in the Android build — the player is already in the
+app — and it must not exist in a portal build, because CrazyGames and
+GameDistribution both restrict outbound links. Built in code
+(`scripts/ui/play_cta.gd`) rather than in the three `.tscn` files precisely so
+it is absent, not merely hidden, in three of the four targets: a scene node
+would have to be found and hidden in each, and one missed is a QA rejection.
+
+It is on all three screens rather than only game-over because the web build's
+purpose is driving Android installs, and a player who loads the page and leaves
+without finishing a run would never reach a game-over-only CTA.
+
+**2. Portal interstitials replace AdMob on portal builds.** AdMob is Android-only
+(`ad_manager.gd` early-returns off Android) and portals forbid third-party ad
+code, so the two ad paths are mutually exclusive by construction and can never
+both be live in one binary.
+
+No C++ original exists for either — they are distribution plumbing, not ported
+behaviour. Gameplay, scoring, collision, and level content are byte-identical
+across all web variants and Android.
+
+Not divergent, worth recording: `resources/audio/vg_bt_music.mp3` was re-encoded
+160 → 96 kbps to cut download size. Same track, same length, same playback code;
+the Android build gets the smaller file too.

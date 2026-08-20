@@ -7,6 +7,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **Web build variants for portal distribution.** Three web export presets
+  selected by Godot custom feature tags: the default one for our own channels
+  (itch.io, GitHub Pages) which shows a "Get it on Google Play" button on the
+  home, pause and game-over screens, plus `crazygames` and `gamedistribution`
+  variants that carry
+  that portal's ad SDK and suppress the store link — both portals restrict
+  outbound links and forbid third-party ad code, so one build cannot serve both.
+  New `autoload/web_portal.gd` (inert off-web, same guard pattern as
+  `AdManager`), generated per-portal HTML shells, `tools/build_web.sh`,
+  `tools/gen_web_shells.py`, and 18 tests. See `docs/WEB_PORTALS.md`
+- `docs/WEB_PORTALS.md` — portal-by-portal requirements, the size analysis, and
+  revenue expectations
+
+### Changed
+- **Web download cut from 19.4 MB to 13.6 MB gzipped.** The AdMob addon's ~7 MB
+  of Android-only `.aar` payload was shipping to every browser player; web
+  presets now exclude it along with the test suite and GUT (`index.pck`
+  10.9 MB → 5.4 MB). Background music re-encoded 160 → 96 kbps joint-stereo
+  (2.83 MB → 1.70 MB), which shrinks the Android build too
+- `play/` and `builds/` now carry `.gdignore` — both live inside the project, so
+  Godot was re-importing the previous web export's own PNGs and shipping them
+  back inside the next `.pck`
+
 ---
 
 ## [1.4.0] — 2026-08-06

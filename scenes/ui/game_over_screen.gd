@@ -26,6 +26,7 @@ func _ready() -> void:
 	_btn_restart.pressed.connect(func():
 		AudioManager.play_sfx(AudioManager.SFX_BUTTON)
 		emit_signal("restart_pressed"))
+	_build_play_cta()
 	hide()
 
 func show_result(level_name: String, score: GameScore) -> void:
@@ -39,3 +40,18 @@ func show_result(level_name: String, score: GameScore) -> void:
 	_badge.texture      = _tex_record if is_record else _tex_normal
 
 	show()
+
+	# Portal builds only, and only every Nth run — WebPortal rate-limits and
+	# no-ops off the web, so this is a single feature check on Android.
+	WebPortal.request_break_ad()
+
+
+# ---------------------------------------------------------------------------
+# "Get it on Google Play" CTA — web builds on our own channels only.
+# See scripts/ui/play_cta.gd for why this is built in code and not in the .tscn.
+# ---------------------------------------------------------------------------
+
+func _build_play_cta() -> void:
+	# Sits just below the game-over panel (BG ends at y=624 in the 1024x768
+	# viewport), so it never overlaps the Home/Restart buttons.
+	PlayStoreCta.attach(self, Rect2(262, 638, 500, 56), PlayStoreCta.TEXT_LONG)

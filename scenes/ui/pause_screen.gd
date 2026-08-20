@@ -21,6 +21,8 @@ func _ready() -> void:
 	_btn_home.pressed.connect(func():
 		AudioManager.play_sfx(AudioManager.SFX_BUTTON)
 		emit_signal("home_pressed"))
+	# Below the pause panel (BG ends at y=609), clear of resume/restart/home.
+	PlayStoreCta.attach(self, Rect2(262, 622, 500, 56), PlayStoreCta.TEXT_SHORT)
 	hide()
 
 func show_pause() -> void:
