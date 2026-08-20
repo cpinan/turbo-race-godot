@@ -423,12 +423,18 @@ over a 10-group window: single 20, ground 14, air 13) to 24 / 18 / 18.
 `CLAUDE.md` requires web-specific divergences to be flagged here. There are two,
 both in `autoload/web_portal.gd`, and neither touches gameplay.
 
-**1. A "Get it on Google Play" button on the game-over screen.** Web only, and
-only on our own channels (itch.io, GitHub Pages, local). It does not exist in
-the Android build — the player is already in the app — and it must not exist in
-a portal build, because CrazyGames and GameDistribution both restrict outbound
-links. Built in code rather than in `game_over_screen.tscn` precisely so it is
-absent, not merely hidden, in three of the four targets.
+**1. A "Get it on Google Play" button on the home, pause, and game-over
+screens.** Web only, and only on our own channels (itch.io, GitHub Pages,
+local). It does not exist in the Android build — the player is already in the
+app — and it must not exist in a portal build, because CrazyGames and
+GameDistribution both restrict outbound links. Built in code
+(`scripts/ui/play_cta.gd`) rather than in the three `.tscn` files precisely so
+it is absent, not merely hidden, in three of the four targets: a scene node
+would have to be found and hidden in each, and one missed is a QA rejection.
+
+It is on all three screens rather than only game-over because the web build's
+purpose is driving Android installs, and a player who loads the page and leaves
+without finishing a run would never reach a game-over-only CTA.
 
 **2. Portal interstitials replace AdMob on portal builds.** AdMob is Android-only
 (`ad_manager.gd` early-returns off Android) and portals forbid third-party ad

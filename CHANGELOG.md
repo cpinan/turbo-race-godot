@@ -11,12 +11,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Web build variants for portal distribution.** Three web export presets
   selected by Godot custom feature tags: the default one for our own channels
   (itch.io, GitHub Pages) which shows a "Get it on Google Play" button on the
-  game-over screen, plus `crazygames` and `gamedistribution` variants that carry
+  home, pause and game-over screens, plus `crazygames` and `gamedistribution`
+  variants that carry
   that portal's ad SDK and suppress the store link — both portals restrict
   outbound links and forbid third-party ad code, so one build cannot serve both.
   New `autoload/web_portal.gd` (inert off-web, same guard pattern as
   `AdManager`), generated per-portal HTML shells, `tools/build_web.sh`,
-  `tools/gen_web_shells.py`, and 15 tests. See `docs/WEB_PORTALS.md`
+  `tools/gen_web_shells.py`, and 17 tests. See `docs/WEB_PORTALS.md`
 - `docs/WEB_PORTALS.md` — portal-by-portal requirements, the size analysis, and
   revenue expectations
 

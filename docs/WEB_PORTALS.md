@@ -174,7 +174,7 @@ tags** (`custom_features=` in the export preset), read at runtime through
 
 | Preset | Feature tag | HTML shell | Play CTA | Ads |
 |---|---|---|---|---|
-| `Web` | *(none)* | Godot default | **yes**, on game-over | none |
+| `Web` | *(none)* | Godot default | **yes** — home, pause, game-over | none |
 | `Web CrazyGames` | `crazygames` | `web/shells/crazygames.html` | no | CrazyGames SDK |
 | `Web GameDistribution` | `gamedistribution` | `web/shells/gamedistribution.html` | no | GD SDK |
 
@@ -183,11 +183,12 @@ tags** (`custom_features=` in the export preset), read at runtime through
 | File | Role |
 |---|---|
 | `autoload/web_portal.gd` | Variant detection, CTA gating, gameplay-session + ad calls. Inert off-web. |
+| `scripts/ui/play_cta.gd` | Shared "Get it on Google Play" button factory. Returns null and adds nothing when the CTA is not allowed. |
 | `web/head/{crazygames,gamedistribution}.html` | Hand-written portal SDK glue. **Edit these.** |
 | `web/shells/*.html` | Generated shells. **Never edit — they are overwritten.** |
 | `tools/gen_web_shells.py` | Regenerates shells from Godot's own template + the head snippets. `--check` fails on stale. |
 | `tools/build_web.sh` | Builds and zips any variant, or `all`. |
-| `tests/unit/test_web_portal.gd` | 15 tests: inert off-web, CTA gating, ad pacing, CTA construction. |
+| `tests/unit/test_web_portal.gd` | 17 tests: inert off-web, CTA gating, ad pacing, CTA present on all three screens for the owned build and absent on every other target. |
 
 ### Preset settings — recreate these by hand if needed
 

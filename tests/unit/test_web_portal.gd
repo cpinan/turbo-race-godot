@@ -94,53 +94,79 @@ func test_request_break_ad_leaves_audio_unmuted_without_sdk() -> void:
 # ---------------------------------------------------------------------------
 # CTA construction
 #
-# _build_play_cta() is unreachable in a headless run because show_play_cta() is
-# false there, so the whole function — theme overrides, StyleBoxFlat, signal
-# wiring — would ship to itch.io never having executed once. Forcing the flags
-# is the only way to exercise it off-browser.
+# PlayStoreCta.attach() is unreachable in a headless run because
+# show_play_cta() is false there, so the whole factory — theme overrides,
+# StyleBoxFlat, signal wiring — would ship to itch.io never having executed
+# once. Forcing the variant flags is the only way to exercise it off-browser.
+#
+# The web build exists to drive Android installs, so every screen a player can
+# sit on must carry the CTA, and no portal build may carry any of them.
 # ---------------------------------------------------------------------------
 
-func _with_owned_web_variant(body: Callable) -> void:
-	var was_web: bool = WebPortal._is_web
-	var was_portal: int = WebPortal._portal
-	WebPortal._is_web = true
-	WebPortal._portal = WebPortal.Portal.OWNED
-	body.call()
-	WebPortal._is_web = was_web
-	WebPortal._portal = was_portal
+# scene path -> node path the CTA is expected at within that scene
+const CTA_SCREENS: Dictionary = {
+	"res://scenes/ui/home_screen.tscn":      "Menu/PlayStoreCTA",
+	"res://scenes/ui/pause_screen.tscn":     "PlayStoreCTA",
+	"res://scenes/ui/game_over_screen.tscn": "PlayStoreCTA",
+}
+
+func _set_variant(is_web: bool, portal: int) -> Array:
+	var prev: Array = [WebPortal._is_web, WebPortal._portal]
+	WebPortal._is_web = is_web
+	WebPortal._portal = portal
+	return prev
+
+func _restore_variant(prev: Array) -> void:
+	WebPortal._is_web = prev[0]
+	WebPortal._portal = prev[1]
 
 func test_cta_shown_for_owned_web_variant() -> void:
-	_with_owned_web_variant(func():
-		assert_true(WebPortal.show_play_cta(), "owned web variant shows the store CTA"))
+	var prev := _set_variant(true, WebPortal.Portal.OWNED)
+	assert_true(WebPortal.show_play_cta(), "owned web variant shows the store CTA")
+	_restore_variant(prev)
 
 func test_cta_hidden_for_portal_variants() -> void:
-	var was_web: bool = WebPortal._is_web
-	var was_portal: int = WebPortal._portal
-	WebPortal._is_web = true
+	var prev := _set_variant(true, WebPortal.Portal.OWNED)
 	for portal in [WebPortal.Portal.CRAZYGAMES, WebPortal.Portal.GAMEDISTRIBUTION]:
 		WebPortal._portal = portal
 		assert_false(WebPortal.show_play_cta(),
 			"%s forbids outbound store links" % WebPortal.portal_name())
-	WebPortal._is_web = was_web
-	WebPortal._portal = was_portal
+	_restore_variant(prev)
 
-func test_cta_button_builds_without_error() -> void:
-	_with_owned_web_variant(func():
-		var screen: GameOverScreen = load("res://scenes/ui/game_over_screen.tscn").instantiate()
+func test_cta_built_on_every_screen_for_owned_build() -> void:
+	var prev := _set_variant(true, WebPortal.Portal.OWNED)
+	for scene_path in CTA_SCREENS:
+		var node_path: String = CTA_SCREENS[scene_path]
+		var screen: CanvasLayer = load(scene_path).instantiate()
 		add_child_autofree(screen)
-		var cta: Button = screen.get_node_or_null("PlayStoreCTA")
-		assert_not_null(cta, "owned web build builds the CTA button")
-		assert_string_contains(cta.text, "Google Play", "CTA names the destination")
-		assert_true(cta.pressed.get_connections().size() > 0, "CTA is wired to a handler"))
+		var cta: Button = screen.get_node_or_null(node_path)
+		assert_not_null(cta, "%s builds the CTA at %s" % [scene_path, node_path])
+		if cta != null:
+			assert_string_contains(cta.text, "Google Play", "%s CTA names the destination" % scene_path)
+			assert_true(cta.pressed.get_connections().size() > 0,
+				"%s CTA is wired to a handler" % scene_path)
+	_restore_variant(prev)
 
-func test_cta_button_absent_on_portal_build() -> void:
-	var was_web: bool = WebPortal._is_web
-	var was_portal: int = WebPortal._portal
-	WebPortal._is_web = true
-	WebPortal._portal = WebPortal.Portal.CRAZYGAMES
-	var screen: GameOverScreen = load("res://scenes/ui/game_over_screen.tscn").instantiate()
-	add_child_autofree(screen)
-	assert_null(screen.get_node_or_null("PlayStoreCTA"),
-		"portal build must not construct an outbound store link at all")
-	WebPortal._is_web = was_web
-	WebPortal._portal = was_portal
+func test_cta_absent_on_every_screen_for_portal_build() -> void:
+	var prev := _set_variant(true, WebPortal.Portal.CRAZYGAMES)
+	for scene_path in CTA_SCREENS:
+		var screen: CanvasLayer = load(scene_path).instantiate()
+		add_child_autofree(screen)
+		assert_null(screen.get_node_or_null(CTA_SCREENS[scene_path]),
+			"%s must not build an outbound store link on a portal build" % scene_path)
+	_restore_variant(prev)
+
+func test_cta_absent_on_every_screen_off_web() -> void:
+	# Android: the player is already in the app.
+	for scene_path in CTA_SCREENS:
+		var screen: CanvasLayer = load(scene_path).instantiate()
+		add_child_autofree(screen)
+		assert_null(screen.get_node_or_null(CTA_SCREENS[scene_path]),
+			"%s must not build the CTA off-web" % scene_path)
+
+func test_attach_returns_null_when_not_allowed() -> void:
+	var host := Node.new()
+	add_child_autofree(host)
+	assert_null(PlayStoreCta.attach(host, Rect2(0, 0, 100, 40), "x"),
+		"attach() returns null rather than an invisible button")
+	assert_eq(host.get_child_count(), 0, "attach() adds no node at all when disallowed")
