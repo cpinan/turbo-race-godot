@@ -1,0 +1,74 @@
+<!--
+CrazyGames head snippet — injected into web/shells/crazygames.html by
+tools/gen_web_shells.py. Edit this file, never the generated shell.
+
+Installs window.TurboPortal, the four-method façade autoload/web_portal.gd
+calls. All CrazyGames-specific API knowledge is confined to this file.
+
+VERIFY BEFORE SUBMITTING: the SDK URL and method names below are the v3 API.
+CrazyGames revs their SDK; re-check developer.crazygames.com/sdk before the QA
+submission and update this file if the surface moved. The façade contract with
+GDScript stays the same either way.
+-->
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<script>
+window.TurboPortal = (function () {
+	var sdk = null;
+	var ready = false;
+	var adBusy = false;
+
+	try {
+		if (window.CrazyGames && window.CrazyGames.SDK) {
+			window.CrazyGames.SDK.init().then(function () {
+				sdk = window.CrazyGames.SDK;
+				ready = true;
+			}).catch(function (err) {
+				console.warn('CrazyGames SDK init failed:', err);
+			});
+		} else {
+			console.warn('CrazyGames SDK script did not load; running unmonetized.');
+		}
+	} catch (err) {
+		console.warn('CrazyGames SDK threw during init:', err);
+	}
+
+	return {
+		name: 'crazygames',
+		isReady: function () { return ready; },
+
+		gameplayStart: function () {
+			if (!ready) { return; }
+			try { sdk.game.gameplayStart(); } catch (err) { console.warn(err); }
+		},
+
+		gameplayStop: function () {
+			if (!ready) { return; }
+			try { sdk.game.gameplayStop(); } catch (err) { console.warn(err); }
+		},
+
+		// cb(shown: boolean). Must fire exactly once, on every path — GDScript
+		// unmutes audio in the handler, so a dropped callback leaves the game
+		// silent forever.
+		requestAd: function (cb) {
+			if (!ready || adBusy) { cb(false); return; }
+			adBusy = true;
+			var settled = false;
+			var done = function (shown) {
+				if (settled) { return; }
+				settled = true;
+				adBusy = false;
+				cb(shown);
+			};
+			try {
+				sdk.ad.requestAd('midgame', {
+					adFinished: function () { done(true); },
+					adError: function (err) { console.warn('ad error:', err); done(false); }
+				});
+			} catch (err) {
+				console.warn('requestAd threw:', err);
+				done(false);
+			}
+		}
+	};
+}());
+</script>

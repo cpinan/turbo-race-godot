@@ -29,6 +29,7 @@ LeaderboardService="*res://autoload/leaderboard_service.gd"
 AchievementChecker="*res://autoload/achievement_checker.gd"
 AdManager="*res://autoload/ad_manager.gd"
 ReviewService="*res://autoload/review_service.gd"
+WebPortal="*res://autoload/web_portal.gd"
 GodotPlayGameServices="*uid://br5jdflguv57u"
 
 [display]

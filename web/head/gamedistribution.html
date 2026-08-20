@@ -1,0 +1,91 @@
+<!--
+GameDistribution head snippet — injected into web/shells/gamedistribution.html
+by tools/gen_web_shells.py. Edit this file, never the generated shell.
+
+Installs window.TurboPortal, the four-method façade autoload/web_portal.gd
+calls. All GameDistribution-specific API knowledge is confined to this file.
+
+BEFORE THE FIRST BUILD: replace GD_GAME_ID_PLACEHOLDER with the game id
+GameDistribution assigns after you register the game in their dashboard. The
+SDK loads but serves nothing with a placeholder id.
+
+GD's ad model is event-driven rather than callback-driven: showAd() fires
+SDK_GAME_PAUSE, then SDK_GAME_START when the ad is done and the game may
+resume. SDK_GAME_START is therefore the "ad finished" signal — it is also
+emitted on ad failure, which is what we want, since either way play resumes.
+-->
+<script>
+window.GD_OPTIONS = {
+	gameId: 'GD_GAME_ID_PLACEHOLDER',
+	onEvent: function (event) {
+		switch (event.name) {
+		case 'SDK_READY':
+			window.__turboGdReady = true;
+			break;
+		case 'SDK_GAME_START':
+			// Ad over (or never ran) — resume.
+			if (window.__turboAdDone) { window.__turboAdDone(true); }
+			break;
+		case 'SDK_ERROR':
+			if (window.__turboAdDone) { window.__turboAdDone(false); }
+			break;
+		default:
+			break;
+		}
+	}
+};
+</script>
+<script src="https://html5.api.gamedistribution.com/main.min.js"></script>
+<script>
+window.TurboPortal = (function () {
+	var adBusy = false;
+
+	function sdk() {
+		return window.gdsdk || null;
+	}
+
+	return {
+		name: 'gamedistribution',
+		isReady: function () { return !!window.__turboGdReady && !!sdk(); },
+
+		// GD has no gameplay session API in the CrazyGames sense. Preloading on
+		// gameplay start is the closest useful equivalent: it warms the ad that
+		// will be shown at the next break instead of stalling on it.
+		gameplayStart: function () {
+			var s = sdk();
+			if (!s || !s.preloadAd) { return; }
+			try { s.preloadAd('interstitial'); } catch (err) { console.warn(err); }
+		},
+
+		gameplayStop: function () { /* no GD equivalent */ },
+
+		// cb(shown: boolean). Must fire exactly once, on every path — GDScript
+		// unmutes audio in the handler, so a dropped callback leaves the game
+		// silent forever. GD can go quiet if the ad frame fails to load, hence
+		// the timeout.
+		requestAd: function (cb) {
+			var s = sdk();
+			if (!s || adBusy) { cb(false); return; }
+			adBusy = true;
+			var settled = false;
+			var done = function (shown) {
+				if (settled) { return; }
+				settled = true;
+				adBusy = false;
+				window.__turboAdDone = null;
+				cb(shown);
+			};
+			window.__turboAdDone = done;
+			// Backstop: GD's own events are the happy path, this catches a
+			// silent failure so the game never hangs muted.
+			setTimeout(function () { done(false); }, 30000);
+			try {
+				s.showAd('interstitial');
+			} catch (err) {
+				console.warn('showAd threw:', err);
+				done(false);
+			}
+		}
+	};
+}());
+</script>
