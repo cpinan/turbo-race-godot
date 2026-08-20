@@ -291,11 +291,16 @@ Assets are already produced — reuse `playstoreassets/marketing/` (8 screenshot
       Store CTA verified working from inside itch's iframe — that was the real
       risk, since an iframe blocks `window.open()` without `allow-popups` and a
       dead CTA looks identical to a working one.
-- [ ] Newgrounds: upload the same zip, same assets, join the ad revenue share
+- [x] **Newgrounds — LIVE: https://www.newgrounds.com/portal/view/1047972**
+      (2026-08-20, under judgment). Same zip, 960×540 embed, touchscreen
+      friendly on, gamepads off (no `InputEventJoypad` handling exists),
+      SharedArrayBuffer off, Allow Embedding on.
+      **Still to do: the ad revenue share is account-level, not on the
+      submission form — enable it in account settings, or Newgrounds earns
+      nothing.**
 - [x] Own site: `play/` serves 1.4.0 with the Play CTA on home, pause and
       game-over; "Also playable on itch.io" strip live on the landing page
-- [ ] Add Newgrounds to the "Also playable on" strip in `index.html` once that
-      page is live (the markup is there, the URL is a pending comment)
+- [x] "Also playable on" strip links both itch.io and Newgrounds
 - [ ] **Test on a real phone browser** — iOS Safari and Android Chrome. Godot 4
       web is memory-hungry and audio-fragile on mobile, and portal traffic is
       majority mobile. Genuinely untested right now.
