@@ -284,14 +284,18 @@ Assets are already produced — reuse `playstoreassets/marketing/` (8 screenshot
 
 **Ready to upload now** (`builds/turbo-race-web-1.4.0.zip`):
 
-- [ ] itch.io: create project, upload the zip, kind = HTML, "play in browser" on
-- [ ] itch.io: viewport 960×540, Fullscreen button ON, Mobile friendly ON,
-      **SharedArrayBuffer OFF** (this is a no-threads build; turning it on breaks it)
-- [ ] itch.io: description + GIF + screenshots + Play Store link, donations on
+- [x] **itch.io — LIVE: https://cpinan.itch.io/turbo-race** (2026-08-20).
+      Kind = HTML, "play in browser" on, viewport 960×540, Fullscreen + Mobile
+      friendly (landscape) on, SharedArrayBuffer OFF, animated GIF cover,
+      donations on, Play Store link in the App-store-links field.
+      Store CTA verified working from inside itch's iframe — that was the real
+      risk, since an iframe blocks `window.open()` without `allow-popups` and a
+      dead CTA looks identical to a working one.
 - [ ] Newgrounds: upload the same zip, same assets, join the ad revenue share
-- [ ] Own site: `play/` already serves 1.4.0 with the Play CTA on game-over
-- [ ] Uncomment the "Also playable on" strip in `index.html` as each page goes
-      live, and fill in the real URLs
+- [x] Own site: `play/` serves 1.4.0 with the Play CTA on home, pause and
+      game-over; "Also playable on itch.io" strip live on the landing page
+- [ ] Add Newgrounds to the "Also playable on" strip in `index.html` once that
+      page is live (the markup is there, the URL is a pending comment)
 - [ ] **Test on a real phone browser** — iOS Safari and Android Chrome. Godot 4
       web is memory-hungry and audio-fragile on mobile, and portal traffic is
       majority mobile. Genuinely untested right now.

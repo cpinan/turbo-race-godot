@@ -1,5 +1,7 @@
 # itch.io + Newgrounds listing — web build
 
+**Live:** https://cpinan.itch.io/turbo-race (published 2026-08-20)
+
 Paste-ready copy for the browser build. Companion to `en-US.md` (Play Store).
 
 **The web build is not the Android build.** Leaderboards, achievements, and tilt
