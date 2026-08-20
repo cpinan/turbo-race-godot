@@ -117,8 +117,10 @@ with `08_nearmiss`; itch recommends 3–5.
 Same zip, same assets. Differences that matter:
 
 - **Upload as:** Game → HTML5. Same "index.html at zip root" requirement.
-- **Join the ad revenue share** during submission — this is the one Tier 1
-  channel that pays anything, and it is opt-in, so it is easy to miss.
+- **There is no ad revenue share to join.** Corrected 2026-08-20: Newgrounds'
+  author ad-revenue programme is retired, and the site is moving to an ad-free
+  model funded by paid Supporters. Publish for the audience, not the money.
+  Fill in the account Payment Address regardless — contest prizes pay to it.
 - **Dimensions:** 960 × 540, scaling allowed.
 - **Rating:** Everyone. No violence, no ads in the build itself.
 - Newgrounds' audience skews toward exactly this kind of arcade runner, so lead

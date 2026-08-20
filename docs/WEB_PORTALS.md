@@ -104,10 +104,16 @@ megabyte, so the engine template is the only lever that still matters.
 - Do turn on "Support this game" / pay-what-you-want donations anyway — costs
   nothing. itch's default cut is 10%, configurable by you.
 
-**Newgrounds** — free, instant, has an actual ad revenue share on game pages.
-- Revenue is proportional to plays and is small at low traffic, but non-zero,
-  which already beats itch.
-- Audience skews toward exactly this kind of arcade/runner game.
+**Newgrounds** — free, instant. **Exposure only — it does not pay.**
+- Corrected 2026-08-20. Newgrounds' author ad-revenue-share is a **legacy
+  system that is no longer active** (their own monetization page: "regarding
+  legacy systems that are no longer active"). The site is moving to an ad-free
+  model funded by paid Supporters, with a new rev-share planned only once there
+  are enough of them. There is no toggle to enable.
+- Fill in the account **Payment Address** anyway: it is what contest prizes pay
+  to, and it is already in place if the new rev-share ever launches.
+- Audience skews toward exactly this kind of arcade/runner game, so it is still
+  worth publishing — as a traffic channel, ranked with itch, not above it.
 - Optional: their Medals/Scoreboards API. **Out of scope for now** — the
   leaderboard interface is Android/GPGS-specific and adding a web backend is a
   separate milestone (see `NEXT_MILESTONES.md` M2/M3 reasoning).
@@ -261,6 +267,12 @@ the real integration test.
 
 Ranked by what will actually pay, for this game, at realistic traffic:
 
+0. **Correction, 2026-08-20:** Newgrounds was listed here as paying a small
+   amount. It does not — its author ad-revenue-share is retired (see §3). That
+   leaves the ad portals as the only web channels that pay anything at all,
+   which makes the §4 build variants the only route to web revenue rather than
+   one of two.
+
 1. **Google Play + AdMob — already shipped, and still the main earner.**
    Installed users open the app repeatedly; browser players almost never come
    back. Nothing on this page will out-earn the Android build.
@@ -295,9 +307,8 @@ Assets are already produced — reuse `playstoreassets/marketing/` (8 screenshot
       (2026-08-20, under judgment). Same zip, 960×540 embed, touchscreen
       friendly on, gamepads off (no `InputEventJoypad` handling exists),
       SharedArrayBuffer off, Allow Embedding on.
-      **Still to do: the ad revenue share is account-level, not on the
-      submission form — enable it in account settings, or Newgrounds earns
-      nothing.**
+      No revenue to enable — see §3, the author ad-revenue-share is retired.
+      Payment Address is on file for contest prizes.
 - [x] Own site: `play/` serves 1.4.0 with the Play CTA on home, pause and
       game-over; "Also playable on itch.io" strip live on the landing page
 - [x] "Also playable on" strip links both itch.io and Newgrounds
