@@ -31,9 +31,15 @@ signal ad_finished(shown: bool)
 
 const PLAY_URL: String = "https://play.google.com/store/apps/details?id=com.carlos.pinan.turborace.godot"
 
-# Portals reject builds that ask for an ad on every game-over. Skip this many
-# runs between requests.
+# Portals reject builds that ask for an ad on every game-over. Two gates, and
+# both must pass.
+#
+# CrazyGames documents the midgame interval as ~3 minutes and returns an
+# "adCooldown" error if asked sooner. A run-count gate alone is time-blind: this
+# is an endless runner where a bad run lasts seconds, so three runs can be under
+# a minute and every request would be refused.
 const RUNS_BETWEEN_ADS: int = 3
+const MIN_SECONDS_BETWEEN_ADS: float = 180.0
 
 var _portal: Portal = Portal.OWNED
 var _is_web: bool = false
@@ -46,6 +52,14 @@ var _ad_callback: JavaScriptObject = null
 var _runs_since_ad: int = 0
 var _ad_in_flight: bool = false
 var _gameplay_active: bool = false
+
+# Wall clock of the last ad that actually started, for the cooldown gate.
+# Negative sentinel so the first ad is not blocked by the initial cooldown.
+var _last_ad_msec: float = -MIN_SECONDS_BETWEEN_ADS * 1000.0
+
+# Only true between adStarted and adFinished/adError. An ad refused on cooldown
+# never starts, so the game must not be unmuted as if it had.
+var _muted_for_ad: bool = false
 
 
 func _ready() -> void:
@@ -65,7 +79,7 @@ func _ready() -> void:
 		if _iface == null:
 			push_warning("WebPortal: build tagged for a portal but window.TurboPortal is missing — wrong HTML shell? Ads disabled.")
 		else:
-			_ad_callback = JavaScriptBridge.create_callback(_on_js_ad_finished)
+			_ad_callback = JavaScriptBridge.create_callback(_on_js_ad_event)
 
 	GameManager.game_state_changed.connect(_on_game_state_changed)
 	print("WebPortal: variant=", portal_name(), " sdk=", _iface != null)
@@ -135,8 +149,12 @@ func _gameplay_stop() -> void:
 
 # Pure so the pacing rule is unit-testable without a browser or an SDK, per
 # CLAUDE.md's rule that logic lives in plain functions.
-static func should_show_ad(runs_since_ad: int, runs_between: int) -> bool:
-	return runs_since_ad >= runs_between
+#
+# Both gates must pass. The run gate stops an ad landing after a four-second
+# run; the time gate is the one the portal actually enforces.
+static func should_show_ad(runs_since_ad: int, runs_between: int,
+		seconds_since_ad: float, min_seconds: float) -> bool:
+	return runs_since_ad >= runs_between and seconds_since_ad >= min_seconds
 
 
 func request_break_ad() -> void:
@@ -145,20 +163,34 @@ func request_break_ad() -> void:
 		return
 
 	_runs_since_ad += 1
-	if not should_show_ad(_runs_since_ad, RUNS_BETWEEN_ADS):
+	var since: float = (Time.get_ticks_msec() - _last_ad_msec) / 1000.0
+	if not should_show_ad(_runs_since_ad, RUNS_BETWEEN_ADS, since, MIN_SECONDS_BETWEEN_ADS):
 		ad_finished.emit(false)
 		return
 
-	_runs_since_ad = 0
 	_ad_in_flight = true
-	# Portals require the game silent and stopped for the duration of the ad.
-	_gameplay_stop()
-	AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), true)
+	# Audio and pause are handled in the "started" branch, not here: an ad
+	# refused on cooldown never starts, and muting first would blip the sound
+	# off and on for an ad that never played.
 	_iface.requestAd(_ad_callback)
 
 
-func _on_js_ad_finished(args: Array) -> void:
-	_ad_in_flight = false
-	AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), false)
-	var shown: bool = args.size() > 0 and bool(args[0])
-	ad_finished.emit(shown)
+# The shell reports one of "started" / "finished" / "error". "started" may or
+# may not arrive; exactly one of "finished"/"error" always does.
+func _on_js_ad_event(args: Array) -> void:
+	var event: String = String(args[0]) if args.size() > 0 else "error"
+	match event:
+		"started":
+			# CrazyGames requires the game silent and paused for the ad's
+			# duration, restored when it ends or fails.
+			_last_ad_msec = Time.get_ticks_msec()
+			_runs_since_ad = 0
+			_muted_for_ad = true
+			_gameplay_stop()
+			AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), true)
+		"finished", "error":
+			_ad_in_flight = false
+			if _muted_for_ad:
+				_muted_for_ad = false
+				AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), false)
+			ad_finished.emit(event == "finished")

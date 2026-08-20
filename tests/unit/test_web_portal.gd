@@ -55,21 +55,46 @@ func test_play_url_matches_android_package() -> void:
 # Ad pacing — pure rule, no SDK needed
 # ---------------------------------------------------------------------------
 
-func test_no_ad_before_the_gap_elapses() -> void:
-	assert_false(WebPortal.should_show_ad(1, 3), "run 1 of 3: too soon")
-	assert_false(WebPortal.should_show_ad(2, 3), "run 2 of 3: too soon")
+# Both gates must pass: enough runs AND enough wall-clock time.
+const _LONG_ENOUGH: float = 9999.0
 
-func test_ad_shows_once_the_gap_elapses() -> void:
-	assert_true(WebPortal.should_show_ad(3, 3), "run 3 of 3: show")
+func test_no_ad_before_the_run_gap_elapses() -> void:
+	assert_false(WebPortal.should_show_ad(1, 3, _LONG_ENOUGH, 180.0), "run 1 of 3: too soon")
+	assert_false(WebPortal.should_show_ad(2, 3, _LONG_ENOUGH, 180.0), "run 2 of 3: too soon")
+
+func test_ad_shows_once_both_gaps_elapse() -> void:
+	assert_true(WebPortal.should_show_ad(3, 3, 180.0, 180.0), "run 3 and 180s: show")
 
 func test_ad_shows_when_counter_overshoots() -> void:
 	# Guards the exact-match bug class that broke the in-app review gate: a
 	# counter that has run past the threshold must still open the gate.
-	assert_true(WebPortal.should_show_ad(9, 3), "overshooting the gap still shows")
+	assert_true(WebPortal.should_show_ad(9, 3, _LONG_ENOUGH, 180.0), "overshooting still shows")
 
-func test_runs_between_ads_is_conservative() -> void:
+func test_run_gate_alone_is_not_enough() -> void:
+	# The defect this gate was added for: three runs of an endless runner can
+	# take well under a minute, and CrazyGames refuses a midgame ad requested
+	# inside its ~3 minute interval with an "adCooldown" error. A run-count-only
+	# gate asks constantly and is refused constantly.
+	assert_false(WebPortal.should_show_ad(3, 3, 45.0, 180.0),
+		"three fast runs inside the cooldown must not request an ad")
+	assert_false(WebPortal.should_show_ad(50, 3, 179.9, 180.0),
+		"any number of runs inside the cooldown is still too soon")
+
+func test_time_gate_alone_is_not_enough() -> void:
+	assert_false(WebPortal.should_show_ad(1, 3, _LONG_ENOUGH, 180.0),
+		"idling past the cooldown does not earn an ad after one run")
+
+func test_pacing_constants_respect_the_portal_interval() -> void:
 	assert_true(WebPortal.RUNS_BETWEEN_ADS >= 2,
 		"an ad on every game-over is a portal QA rejection")
+	assert_true(WebPortal.MIN_SECONDS_BETWEEN_ADS >= 180.0,
+		"CrazyGames documents a ~3 minute midgame interval")
+
+func test_first_ad_is_not_blocked_by_the_initial_cooldown() -> void:
+	# _last_ad_msec starts at a negative sentinel so a fresh session is already
+	# past the cooldown; starting it at 0 would block the first ad for 3 minutes.
+	assert_true(WebPortal._last_ad_msec <= 0.0,
+		"the cooldown clock starts already elapsed")
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +108,56 @@ func test_request_break_ad_emits_false_without_sdk() -> void:
 	WebPortal.request_break_ad()
 	# NOTE: this assert's 4th parameter is an emission index, not a message.
 	assert_signal_emitted_with_parameters(WebPortal, "ad_finished", [false])
+
+
+# ---------------------------------------------------------------------------
+# Ad event contract: "started" | "finished" | "error"
+#
+# "started" is optional — an ad refused on cooldown never starts. Muting on
+# "started" rather than before the request is what keeps a refused ad from
+# blipping the audio off and on. The mute must only be undone if it was ever
+# applied, or an errored request would unmute audio the player muted.
+# ---------------------------------------------------------------------------
+
+func _master_muted() -> bool:
+	return AudioServer.is_bus_mute(AudioServer.get_bus_index("Master"))
+
+func test_error_without_started_does_not_touch_audio() -> void:
+	# The adCooldown path: error arrives, no ad ever played.
+	watch_signals(WebPortal)
+	WebPortal._on_js_ad_event(["error"])
+	assert_false(_master_muted(), "an ad that never started must not leave audio muted")
+	assert_signal_emitted_with_parameters(WebPortal, "ad_finished", [false])
+
+func test_started_then_finished_restores_audio() -> void:
+	watch_signals(WebPortal)
+	WebPortal._on_js_ad_event(["started"])
+	assert_true(_master_muted(), "audio is silenced while the ad plays")
+	WebPortal._on_js_ad_event(["finished"])
+	assert_false(_master_muted(), "audio is restored when the ad ends")
+	assert_signal_emitted_with_parameters(WebPortal, "ad_finished", [true])
+
+func test_started_then_error_also_restores_audio() -> void:
+	# An ad that starts and then fails must not leave the game silent.
+	WebPortal._on_js_ad_event(["started"])
+	assert_true(_master_muted(), "pre-condition: muted")
+	WebPortal._on_js_ad_event(["error"])
+	assert_false(_master_muted(), "a failed ad still restores audio")
+
+func test_started_resets_the_pacing_clocks() -> void:
+	WebPortal._runs_since_ad = 99
+	WebPortal._on_js_ad_event(["started"])
+	assert_eq(WebPortal._runs_since_ad, 0, "the run counter resets when an ad actually plays")
+	assert_gt(WebPortal._last_ad_msec, 0.0, "the cooldown clock starts when the ad plays")
+	WebPortal._on_js_ad_event(["finished"])
+	# Leave the cooldown clock in the past so later tests are not gated by it.
+	WebPortal._last_ad_msec = -WebPortal.MIN_SECONDS_BETWEEN_ADS * 1000.0
+
+func test_malformed_event_is_treated_as_an_error() -> void:
+	watch_signals(WebPortal)
+	WebPortal._on_js_ad_event([])
+	assert_signal_emitted_with_parameters(WebPortal, "ad_finished", [false])
+	assert_false(_master_muted(), "a malformed event must not strand the audio bus")
 
 func test_request_break_ad_leaves_audio_unmuted_without_sdk() -> void:
 	var master: int = AudioServer.get_bus_index("Master")
