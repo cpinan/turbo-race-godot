@@ -42,10 +42,32 @@ Output (`builds/web/`): `index.html`, `index.js`, `index.wasm` (39 MB raw /
 icons. **Total transfer ~14.6 MB gzipped** — see `WEB_PORTALS.md` §2 for why
 that number matters and how to cut it if a portal rejects on load time.
 
-Test locally (must be http(s), not `file://`):
+Test locally:
 ```sh
-cd builds/web && python3 -m http.server 8080   # open http://localhost:8080
+tools/serve_web.sh                       # builds/web, or pass any variant dir
 ```
+
+Serves HTTP on :8099 and HTTPS on :8443, and runs `adb reverse` for any
+connected Android device.
+
+**`file://` will not work, and neither will a plain-HTTP LAN address.** Godot's
+web export requires a browser *secure context* (AudioWorklet and
+`crypto.subtle`), which browsers grant to `localhost` automatically but never to
+`http://192.168.x.x`. Opening the LAN address on a phone fails with:
+
+> The following features required to run Godot projects on the Web are missing:
+> Secure Context - Check web server configuration (use HTTPS)
+
+Three ways round it, cleanest first:
+
+| Device | URL | Notes |
+|---|---|---|
+| Desktop | `http://localhost:8099` | localhost is a secure context |
+| Android | `http://localhost:8099` | needs `adb reverse tcp:8099 tcp:8099`; no cert |
+| Any device on wifi | `https://<lan-ip>:8443` | self-signed — click through the warning |
+
+This is a local-testing artifact only. itch.io and GitHub Pages are both HTTPS,
+so players never see it.
 
 ### Export templates version note
 Matching **4.7.1.stable** web templates are installed (alongside an older
